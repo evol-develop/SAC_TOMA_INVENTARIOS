@@ -1,0 +1,34 @@
+#GET ALL TIPOS GASTOS
+GET https://localhost:44398/api/tiposgastos/gettiposgastos
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkBhZG1pbi5jb20iLCJqdGkiOiIyZjMyY2ZmNy1jN2JhLTQyNjQtYjg1Zi00YzkzOTk2OTM4MDQiLCJleHAiOjE3MTcyNjMwNTQsImlzcyI6Ind3dy5ldm9sc29mdC5jb20iLCJhdWQiOiJ1c2VycyJ9.9vogbV5zEeJ18O-VDFsF1RAk5-v5S20huQ6MNrhmQCs
+###
+#GET ALL CONCEPTOS GASTOS
+GET https://localhost:44398/api/conceptosgastos/getconceptosgastos
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkBhZG1pbi5jb20iLCJqdGkiOiIyZjMyY2ZmNy1jN2JhLTQyNjQtYjg1Zi00YzkzOTk2OTM4MDQiLCJleHAiOjE3MTcyNjMwNTQsImlzcyI6Ind3dy5ldm9sc29mdC5jb20iLCJhdWQiOiJ1c2VycyJ9.9vogbV5zEeJ18O-VDFsF1RAk5-v5S20huQ6MNrhmQCs
+###
+
+#GET ALL GASTOS
+GET https://localhost:44398/api/gastos/getgastos
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkBhZG1pbi5jb20iLCJqdGkiOiIyZjMyY2ZmNy1jN2JhLTQyNjQtYjg1Zi00YzkzOTk2OTM4MDQiLCJleHAiOjE3MTcyNjMwNTQsImlzcyI6Ind3dy5ldm9sc29mdC5jb20iLCJhdWQiOiJ1c2VycyJ9.9vogbV5zEeJ18O-VDFsF1RAk5-v5S20huQ6MNrhmQCs
+###
+
+
+#CREATE GASTO
+POST https://localhost:44398/api/gastos/creategasto
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJhZG1pbkBhZG1pbi5jb20iLCJqdGkiOiIyZjMyY2ZmNy1jN2JhLTQyNjQtYjg1Zi00YzkzOTk2OTM4MDQiLCJleHAiOjE3MTcyNjMwNTQsImlzcyI6Ind3dy5ldm9sc29mdC5jb20iLCJhdWQiOiJ1c2VycyJ9.9vogbV5zEeJ18O-VDFsF1RAk5-v5S20huQ6MNrhmQCs
+
+{
+  "gastos": [
+    {
+      "id": 0,
+      "Empresa": null,
+      "Obras": null,
+      "Concepto": null,
+      "Autorizado": true,
+      "Cantidad": 0,
+      "Precio": 0,
+      "Comentarios": "Comentarios",
+      "UrlComprobante": "url"
+    }
+  ]
+}
