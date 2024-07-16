@@ -84,146 +84,146 @@ const menuItems: MenuItems[] = [
       }
     ]
   },
-  {
-    heading: 'Configuración',
-    items: [
-      {
-        name: 'Catálogos',
-        icon: SourceTwoToneIcon,
-        link: '',
-        items: [
-          {
-            name: 'Generales',
-            icon: SubjectTwoToneIcon,
-            link: '',
-            items: [
-              // {
-              //   id: 4,
-              //   name: 'Obras',
-              //   link: 'configuracion/obras',
-              //   icon: StackedBarChartTwoToneIcon,
-              //   show: true
-              // },
-              // {
-              //   id: 10,
-              //   name: 'Clientes',
-              //   link: 'configuracion/clientes',
-              //   icon: PeopleAltTwoToneIcon,
-              //   show: true
-              // },
-              // {
-              //   id: 5,
-              //   name: 'Conceptos de Gastos',
-              //   link: 'configuracion/conceptosgastos',
-              //   icon: RequestQuoteTwoToneIcon,
-              //   show: false
-              // },
-              // {
-              //   id: 6,
-              //   name: 'Colaboradores',
-              //   link: 'configuracion/colaboradores',
-              //   icon: SupervisorAccountTwoToneIcon,
-              //   show: true
-              // },
-              // {
-              //   id: 14,
-              //   name: 'Grupos de Insumos',
-              //   link: 'configuracion/gruposinsumos',
-              //   icon: AddchartTwoTone,
-              //   show: true
-              // },
-              // {
-              //   id: 15,
-              //   name: 'Insumos',
-              //   link: 'configuracion/insumos',
-              //   icon: MediationTwoToneIcon,
-              //   show: true
-              // },
-              // {
-              //   id: 16,
-              //   name: 'Proveedores',
-              //   link: 'configuracion/proveedores',
-              //   icon: LocalShippingTwoToneIcon,
-              //   show: true
-              // },
-              // {
-              //   id: 8,
-              //   name: 'Roles',
-              //   link: 'configuracion/roles',
-              //   icon: EngineeringTwoToneIcon,
-              //   show: true
-              // },
-              // {
-              //   id: 8,
-              //   name: 'Conceptos de Pago',
-              //   link: 'configuracion/tiposconceptopago',
-              //   icon: ReceiptTwoToneIcon,
-              //   show: true
-              // },
-              // {
-              //   id: 13,
-              //   name: 'Tipos de Insumos',
-              //   link: 'configuracion/tiposinsumos',
-              //   icon: ConstructionTwoToneIcon,
-              //   show: false
-              // },
-              // {
-              //   id: 18,
-              //   name: 'Documentos',
-              //   link: 'documentos/documentos',
-              //   icon: FolderCopyTwoToneIcon,
-              //   show: true
-              // }
-            ],
-            show: true
-          },
-          // {
-          //   id: 9,
-          //   name: 'Empresas',
-          //   link: 'configuracion/empresas',
-          //   icon: BusinessTwoToneIcon,
-          //   show: true
-          // },
-          // {
-          //   id: 7,
-          //   name: 'Usuarios',
-          //   link: 'configuracion/usuarios',
-          //   icon: ManageAccountsTwoToneIcon,
-          //   show: true
-          // }
-        ],
-        show: true
-      },
-    ]
-  },
-  {
-    heading: 'REPORTES',
+  // {
+  //   heading: 'Configuración',
+  //   items: [
+  //     {
+  //       name: 'Catálogos',
+  //       icon: SourceTwoToneIcon,
+  //       link: '',
+  //       items: [
+  //         {
+  //           name: 'Generales',
+  //           icon: SubjectTwoToneIcon,
+  //           link: '',
+  //           items: [
+  //             // {
+  //             //   id: 4,
+  //             //   name: 'Obras',
+  //             //   link: 'configuracion/obras',
+  //             //   icon: StackedBarChartTwoToneIcon,
+  //             //   show: true
+  //             // },
+  //             // {
+  //             //   id: 10,
+  //             //   name: 'Clientes',
+  //             //   link: 'configuracion/clientes',
+  //             //   icon: PeopleAltTwoToneIcon,
+  //             //   show: true
+  //             // },
+  //             // {
+  //             //   id: 5,
+  //             //   name: 'Conceptos de Gastos',
+  //             //   link: 'configuracion/conceptosgastos',
+  //             //   icon: RequestQuoteTwoToneIcon,
+  //             //   show: false
+  //             // },
+  //             // {
+  //             //   id: 6,
+  //             //   name: 'Colaboradores',
+  //             //   link: 'configuracion/colaboradores',
+  //             //   icon: SupervisorAccountTwoToneIcon,
+  //             //   show: true
+  //             // },
+  //             // {
+  //             //   id: 14,
+  //             //   name: 'Grupos de Insumos',
+  //             //   link: 'configuracion/gruposinsumos',
+  //             //   icon: AddchartTwoTone,
+  //             //   show: true
+  //             // },
+  //             // {
+  //             //   id: 15,
+  //             //   name: 'Insumos',
+  //             //   link: 'configuracion/insumos',
+  //             //   icon: MediationTwoToneIcon,
+  //             //   show: true
+  //             // },
+  //             // {
+  //             //   id: 16,
+  //             //   name: 'Proveedores',
+  //             //   link: 'configuracion/proveedores',
+  //             //   icon: LocalShippingTwoToneIcon,
+  //             //   show: true
+  //             // },
+  //             // {
+  //             //   id: 8,
+  //             //   name: 'Roles',
+  //             //   link: 'configuracion/roles',
+  //             //   icon: EngineeringTwoToneIcon,
+  //             //   show: true
+  //             // },
+  //             // {
+  //             //   id: 8,
+  //             //   name: 'Conceptos de Pago',
+  //             //   link: 'configuracion/tiposconceptopago',
+  //             //   icon: ReceiptTwoToneIcon,
+  //             //   show: true
+  //             // },
+  //             // {
+  //             //   id: 13,
+  //             //   name: 'Tipos de Insumos',
+  //             //   link: 'configuracion/tiposinsumos',
+  //             //   icon: ConstructionTwoToneIcon,
+  //             //   show: false
+  //             // },
+  //             // {
+  //             //   id: 18,
+  //             //   name: 'Documentos',
+  //             //   link: 'documentos/documentos',
+  //             //   icon: FolderCopyTwoToneIcon,
+  //             //   show: true
+  //             // }
+  //           ],
+  //           show: false
+  //         },
+  //         // {
+  //         //   id: 9,
+  //         //   name: 'Empresas',
+  //         //   link: 'configuracion/empresas',
+  //         //   icon: BusinessTwoToneIcon,
+  //         //   show: true
+  //         // },
+  //         // {
+  //         //   id: 7,
+  //         //   name: 'Usuarios',
+  //         //   link: 'configuracion/usuarios',
+  //         //   icon: ManageAccountsTwoToneIcon,
+  //         //   show: true
+  //         // }
+  //       ],
+  //       show: false
+  //     },
+  //   ]
+  // },
+  // {
+  //   heading: 'REPORTES',
 
-    items: [
-      {
-        name: 'Reportes',
-        link: '/',
-        icon: AssessmentIcon,
-        items: [
-          // {
-          //   id: 16,
-          //   name: 'Rep. Gastos por Obra',
-          //   link: 'reportes/ReporteGastosObra',
-          //   icon: FindInPageIcon,
-          //   show: true
-          // },
-          // {
-          //   id: 19,
-          //   name: 'Rep. General Obras',
-          //   link: 'reportes/ReporteGeneralObras',
-          //   icon: AssignmentIcon,
-          //   show: true
-          // }
-        ],
-        show: true
-      }
-    ]
-  },
+  //   items: [
+  //     {
+  //       name: 'Reportes',
+  //       link: '/',
+  //       icon: AssessmentIcon,
+  //       items: [
+  //         // {
+  //         //   id: 16,
+  //         //   name: 'Rep. Gastos por Obra',
+  //         //   link: 'reportes/ReporteGastosObra',
+  //         //   icon: FindInPageIcon,
+  //         //   show: true
+  //         // },
+  //         // {
+  //         //   id: 19,
+  //         //   name: 'Rep. General Obras',
+  //         //   link: 'reportes/ReporteGeneralObras',
+  //         //   icon: AssignmentIcon,
+  //         //   show: true
+  //         // }
+  //       ],
+  //       show: false
+  //     }
+  //   ]
+  // },
 ];
 
 export default menuItems;

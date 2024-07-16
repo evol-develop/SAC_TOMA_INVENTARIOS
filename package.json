@@ -1,8 +1,8 @@
 {
   "name": "ControlObra",
   "version": "1.1.0",
-  "title": "Control de Obra",
-  "description": "Sistema de Control de Obra",
+  "title": "Toma de Inventario",
+  "description": "Sistema de Toma de Inventario",
   "author": "EvolSoft",
   "private": false,
   "dependencies": {
