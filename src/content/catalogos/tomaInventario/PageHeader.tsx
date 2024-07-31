@@ -12,7 +12,7 @@ const  PageHeader = ()=> {
     <Grid container justifyContent="space-between" alignItems="center">
       <Grid item>
         <Typography variant="h3" component="h3" gutterBottom>
-          {'Toma Inventarios'} {user? ', ' + user.nombre : ''}
+          {'Toma Inventarios'} {user? ' ' + user.nombre : ''}
         </Typography>
         {/* <Typography variant="subtitle2">
           <b>{ format(new Date(), 'dd MMMM yyyy')}</b>

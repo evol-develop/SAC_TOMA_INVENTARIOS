@@ -1,16 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as ScanditSDK from 'scandit-sdk';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
-import AddIcon from '@mui/icons-material/Add';
 import { Camera } from '@mui/icons-material';
-import { Box, Button, Table, TextField } from '@mui/material';
-import { number } from 'prop-types';
+import { Box, Button, Grid, Table, TextField, Typography } from '@mui/material';
 import {
-  Paper,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Card,
@@ -20,6 +16,9 @@ import {
 import axios from 'src/utils/axios';
 import { ResponseInterface } from 'src/interfaces/responseInterface';
 import RemoveIcon from '@mui/icons-material/Remove';
+import { Html5Qrcode, Html5QrcodeScanner } from 'html5-qrcode';
+import useSound from 'use-sound';
+import sound from '../../assets/sonidos/beep.mp3';
 
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
@@ -37,18 +36,21 @@ const scanAreaBorderStyle = {
   border: '5px solid cyan',
   width: `${(restrictedArea.right - restrictedArea.left) * screenWidth}px`,
   height: `40px`,
-  top: `${(restrictedArea.top * screenHeight) - 5}px`,
+  top: `${restrictedArea.top * screenHeight - 5}px`,
   left: `${restrictedArea.left * screenWidth}px`,
   pointerEvents: 'none' // Para asegurarte de que el borde no interfiera con los eventos de clic
 };
 
 function Scandit() {
+  const readerRef = useRef(null);
   const [show, setShow] = useState(true);
   const [scannedCodes, setScannedCodes] = useState([]);
   const [scanCounts, setScanCounts] = useState<
     { codigo: string; cantidad: number }[]
   >([]);
   const [CodigosNombres, setCodigosNombres] = useState([]);
+
+  const beepSoundRef = useRef(null);
 
   const initScanditSdk = async () => {
     try {
@@ -110,7 +112,7 @@ function Scandit() {
         }
       });
     } catch (error) {
-      console.error('Error initializing Scandit SDK', error);
+      console.error('Error  Scandit SDK', error);
     }
   };
 
@@ -119,7 +121,6 @@ function Scandit() {
       CodigosNombres.find((element) => element.codigo === code)?.desc_art ===
       undefined
     ) {
-      debugger;
       const response = await axios.post<ResponseInterface>(
         `/api/colores/leerCodigo/${code}`
       );
@@ -133,6 +134,12 @@ function Scandit() {
   }
 
   useEffect(() => {
+    if (show) {
+      inithtml5QrcodeScanner();
+    }
+  }, [show]);
+
+  useEffect(() => {
     updateScanCounts();
 
     if (scannedCodes.length == 0 && show == false) {
@@ -141,22 +148,89 @@ function Scandit() {
   }, [scannedCodes]);
 
   useEffect(() => {
-    initScanditSdk();
-  }, []);
-
-  useEffect(() => {
     if (scannedCodes.length === 0 || show === true) {
       setShow(true);
     }
   }, [scannedCodes, show]);
 
   const modificarCodigos = () => {
+    if (scannedCodes.length === 0) {
+      return;
+    }
+    setButtonSeleccted('list');
     setShow(false);
   };
 
   const showScanner = () => {
+    setButtonSeleccted('scanner');
     setShow(true);
-    initScanditSdk();
+    //initScanditSdk();
+  };
+
+  const inithtml5QrcodeScanner = () => {
+    // Crear una referencia al sonido de beep
+    beepSoundRef.current = new Audio(sound);
+
+    // Verificar si el archivo de audio se puede cargar
+    beepSoundRef.current.oncanplaythrough = () => {
+      console.log('Audio cargado correctamente.');
+    };
+
+    beepSoundRef.current.onerror = (error) => {
+      console.error('Error al cargar el archivo de audio:', error);
+    };
+
+    // Inicializar el escáner sin iniciar la cámara
+    const scanner = new Html5Qrcode('reader');
+
+    const onScanSuccess = (qrCodeMessage) => {
+      const now = new Date().getTime();
+      if (!qrCodeMessage || now - qrCodeMessage > 4000) {
+        setScannedCodes((prevCodes) => [
+          ...prevCodes,
+          { codigo: qrCodeMessage, cantidad: 1 }
+        ]);
+
+        beepSoundRef.current.play();
+      }
+    };
+
+    const onScanError = (errorMessage) => {};
+
+    // Obtener la lista de cámaras disponibles
+    Html5Qrcode.getCameras()
+      .then((cameras) => {
+        // Buscar la cámara trasera
+        const rearCamera = cameras.find(
+          (camera) =>
+            camera.label.toLowerCase().includes('back') ||
+            camera.label.toLowerCase().includes('trasera')
+        );
+
+        // Si se encuentra una cámara trasera, usar su id
+        const cameraId = rearCamera ? rearCamera.id : cameras[0].id;
+
+        // Iniciar el escaneo con la cámara seleccionada
+        scanner
+          .start(
+            cameraId,
+            {
+              fps: 1,
+              qrbox: {
+                width: 750,
+                height: 240
+              }
+            },
+            onScanSuccess,
+            onScanError
+          )
+          .catch((err) => {
+            console.error('Error al iniciar el escaneo:', err);
+          });
+      })
+      .catch((err) => {
+        console.error('Error al obtener las cámaras:', err);
+      });
   };
 
   const updateScanCounts = () => {
@@ -228,67 +302,138 @@ function Scandit() {
     setScannedCodes([...registros]);
   };
 
+  const [ButtonSeleccted, setButtonSeleccted] = useState('scanner' || 'list');
+
   return (
-    <Container sx={{ height: '90vh' }}>
-      <Card sx={{ marginBottom: 2 }}>
-        <CardContent>
-          <div className="d-flex flex-column align-items-start justify-space-between">
-            <Button
-              variant="contained"
-              color="error"
-              startIcon={<DeleteIcon />}
-              disabled={scannedCodes.length === 0}
-              style={{ marginRight: '10px' }}
-              onClick={() => setScannedCodes([])}
-            />
-
-            <Button
-              variant="contained"
-              color="warning"
-              startIcon={<EditIcon />}
-              disabled={scannedCodes.length === 0 || !show}
-              onClick={modificarCodigos}
-              style={{ marginRight: '10px' }}
-            />
-
-            <Button
-              variant="contained"
-              color="success"
-              disabled={scannedCodes.length === 0 || show}
-              startIcon={<Camera />}
-              onClick={showScanner}
-            />
+    <>
+      <Container>
+        <Card>
+          <CardContent>
+            <Grid container spacing={2} direction="row" alignItems="flex-start">
+              <Grid item>
+                {/* <Button
+                  size="small"
+                  variant="contained"
+                  color="error"
+                  startIcon={<DeleteIcon />}
+                  disabled={scannedCodes.length === 0}
+                  onClick={() => setScannedCodes([])}
+                /> */}
+                <div
+                  style={{ backgroundColor: '', width: '60px', height: 'auto' }}
+                  aria-disabled={scannedCodes.length === 0 || !show}
+                  onClick={() => setScannedCodes([])}
+                  onTouchStart={function () {
+                    document.getElementById('cleanButton').style.color = 'red';
+                  }}
+                  onTouchEnd={function () {
+                    document.getElementById('cleanButton').style.color = 'gray';
+                  }}
+                >
+                  <DeleteIcon
+                    id={'cleanButton'}
+                    color="secondary"
+                    sx={{ margin: '5' }}
+                    style={{ fontSize: '70px' }}
+                  />
+                </div>
+              </Grid>
+              <Grid item>
+                {/* <Button
+                  size="medium"
+                  variant="contained"
+                  color="warning"
+                  startIcon={<EditIcon />}
+                  disabled={scannedCodes.length === 0 || !show}
+                  onClick={modificarCodigos}
+                /> */}
+                <div
+                  style={{
+                    width: '60px',
+                    height: 'auto',
+                    borderBottom:
+                      ButtonSeleccted === 'list' ? `4px solid orange` : '0px'
+                  }}
+                  aria-disabled={scannedCodes.length === 0 || !show}
+                  onClick={modificarCodigos}
+                >
+                  <EditIcon
+                    color={ButtonSeleccted === 'list' ? 'warning' : 'secondary'}
+                    style={{ fontSize: '60px', marginRight: '25' }}
+                  />
+                </div>
+              </Grid>
+              <Grid item>
+                {/* <Button
+                  size="large"
+                  variant="contained"
+                  color="success"
+                  disabled={scannedCodes.length === 0 || show}
+                  startIcon={<Camera />}
+                  onClick={showScanner}
+                /> */}
+                <div
+                  style={{
+                    width: '70px',
+                    height: 'auto',
+                    borderBottom:
+                      ButtonSeleccted === 'scanner' ? '4px solid green' : '0px'
+                  }}
+                  aria-disabled={scannedCodes.length === 0 || show}
+                  onClick={showScanner}
+                >
+                  <Camera
+                    color={
+                      ButtonSeleccted === 'scanner' ? 'success' : 'secondary'
+                    }
+                    style={{ fontSize: '70px', marginRight: '25' }}
+                  />
+                </div>
+              </Grid>
+            </Grid>
 
             {show && scanCounts ? (
               scanCounts.map((code, index) => (
-                <div key={index}>
-                  <b>Código:</b> {code.codigo}, <b>Cantidad escaneada:</b>{' '}
-                  {code.cantidad}
-                </div>
+                <Box key={index} sx={{ mt: 2 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={3}>
+                      <Typography variant="h2">Código:</Typography>
+                      <Typography variant="h2">Cantidad:</Typography>
+                      <Typography variant="h2">Descripción:</Typography>
+                    </Grid>
+                    <Grid item xs={6}>
+                      <Typography variant="h2">{code.codigo}</Typography>
+                      <Typography variant="h2">{code.cantidad}</Typography>
+                      <Typography variant="h2">
+                        {CodigosNombres.find((x) => x.codigo === code.codigo)
+                          ?.desc_art || 'No se encontró el artículo'}
+                      </Typography>
+                    </Grid>
+                  </Grid>
+                </Box>
               ))
             ) : (
-              <div></div>
+              <Box></Box>
             )}
-          </div>
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
 
-      {!show && scannedCodes.length > 0 ? (
-        <Card
-          sx={{
-            position: 'relative',
-            height: '90vh',
-            minHeight: 400,
-            overflow: 'auto'
-          }}
-        >
-          <CardContent>
-            <>
+        {!show && scannedCodes.length > 0 ? (
+          <Card
+            sx={{
+              position: 'relative',
+              height: '90vh',
+              minHeight: 400,
+              overflow: 'auto',
+              mt: 2
+            }}
+          >
+            <CardContent>
               <Table aria-label="simple table">
                 <TableHead>
                   <TableRow>
                     <TableCell>Código</TableCell>
-                    <TableCell align="left">Articulo</TableCell>
+                    <TableCell align="left">Artículo</TableCell>
                     <TableCell align="right">Cantidad</TableCell>
                     <TableCell align="right">Eliminar</TableCell>
                   </TableRow>
@@ -338,18 +483,17 @@ function Scandit() {
                   ))}
                 </TableBody>
               </Table>
-            </>
-          </CardContent>
-        </Card>
-      ) : null}
+            </CardContent>
+          </Card>
+        ) : null}
 
-      {show && (
-        <>
-          <Box id="your-element-id"></Box>
-          <Box id="scan-area-border" sx={scanAreaBorderStyle}></Box>;
-        </>
-      )}
-    </Container>
+        {show && (
+          <Box sx={{ mt: 2 }}>
+            <div id="reader" ref={readerRef}></div>
+          </Box>
+        )}
+      </Container>
+    </>
   );
 }
 
