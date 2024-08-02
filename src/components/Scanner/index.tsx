@@ -3,7 +3,18 @@ import * as ScanditSDK from 'scandit-sdk';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { Camera } from '@mui/icons-material';
-import { Box, Button, Grid, Table, TextField, Typography } from '@mui/material';
+import {
+  AppBar,
+  Box,
+  Button,
+  Dialog,
+  Grid,
+  IconButton,
+  Table,
+  TextField,
+  Toolbar,
+  Typography
+} from '@mui/material';
 import {
   TableBody,
   TableCell,
@@ -19,6 +30,10 @@ import RemoveIcon from '@mui/icons-material/Remove';
 import { Html5Qrcode, Html5QrcodeScanner } from 'html5-qrcode';
 import useSound from 'use-sound';
 import sound from '../../assets/sonidos/beep.mp3';
+import CloseIcon from '@mui/icons-material/Close';
+import LogoutIcon from '@mui/icons-material/Logout';
+import useAuth from 'src/hooks/useAuth';
+import { useNavigate } from 'react-router-dom';
 
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
@@ -42,7 +57,13 @@ const scanAreaBorderStyle = {
 };
 
 function Scandit() {
+  const {authState, authLocalState, logout} = useAuth()
+  const navigate = useNavigate();
+
+  const [isInitialized, setIsInitialized] = useState(false);
+
   const readerRef = useRef(null);
+  const dialogRef = useRef(null);
   const [show, setShow] = useState(true);
   const [scannedCodes, setScannedCodes] = useState([]);
   const [scanCounts, setScanCounts] = useState<
@@ -132,12 +153,24 @@ function Scandit() {
       setCodigosNombres([...prev, registro]);
     }
   }
+  const [isDialogMounted, setIsDialogMounted] = useState(false);
+
+  useEffect(() => {
+    setIsDialogMounted(true);
+  }, [dialogRef.current]);
 
   useEffect(() => {
     if (show) {
-      inithtml5QrcodeScanner();
+      const intervalId = setInterval(() => {
+        if (isDialogMounted) {
+          inithtml5QrcodeScanner();
+          clearInterval(intervalId);
+        }
+      }, 100);
+
+      return () => clearInterval(intervalId);
     }
-  }, [show]);
+  }, [show, isDialogMounted]);
 
   useEffect(() => {
     updateScanCounts();
@@ -157,6 +190,14 @@ function Scandit() {
     if (scannedCodes.length === 0) {
       return;
     }
+
+    if (readerRef.current) {
+      readerRef.current.stop().then(() => {
+      }).catch((err) => {
+        console.error('Error al detener el escáner:', err);
+      });
+    }
+
     setButtonSeleccted('list');
     setShow(false);
   };
@@ -167,6 +208,21 @@ function Scandit() {
     //initScanditSdk();
   };
 
+  const [isOpen, setOpen] = useState(true);
+
+  const handleClose = () => {
+    setOpen(false);
+  };
+
+  const handleLogout = async () => {
+    try {
+      handleClose();
+      await logout();
+      navigate('/');
+    } catch (err) {
+      console.error(err);
+    }
+  };
   const inithtml5QrcodeScanner = () => {
     // Crear una referencia al sonido de beep
     beepSoundRef.current = new Audio(sound);
@@ -181,7 +237,7 @@ function Scandit() {
     };
 
     // Inicializar el escáner sin iniciar la cámara
-    const scanner = new Html5Qrcode('reader');
+    readerRef.current = new Html5Qrcode('reader');
 
     const onScanSuccess = (qrCodeMessage) => {
       const now = new Date().getTime();
@@ -211,7 +267,7 @@ function Scandit() {
         const cameraId = rearCamera ? rearCamera.id : cameras[0].id;
 
         // Iniciar el escaneo con la cámara seleccionada
-        scanner
+        readerRef.current
           .start(
             cameraId,
             {
@@ -306,193 +362,234 @@ function Scandit() {
 
   return (
     <>
-      <Container>
-        <Card>
-          <CardContent>
-            <Grid container spacing={2} direction="row" alignItems="flex-start">
-              <Grid item>
-                {/* <Button
-                  size="small"
-                  variant="contained"
-                  color="error"
-                  startIcon={<DeleteIcon />}
-                  disabled={scannedCodes.length === 0}
-                  onClick={() => setScannedCodes([])}
-                /> */}
-                <div
-                  style={{ backgroundColor: '', width: '60px', height: 'auto' }}
-                  aria-disabled={scannedCodes.length === 0 || !show}
-                  onClick={() => setScannedCodes([])}
-                  onTouchStart={function () {
-                    document.getElementById('cleanButton').style.color = 'red';
-                  }}
-                  onTouchEnd={function () {
-                    document.getElementById('cleanButton').style.color = 'gray';
-                  }}
-                >
-                  <DeleteIcon
-                    id={'cleanButton'}
-                    color="secondary"
-                    sx={{ margin: '5' }}
-                    style={{ fontSize: '70px' }}
-                  />
-                </div>
-              </Grid>
-              <Grid item>
-                {/* <Button
-                  size="medium"
-                  variant="contained"
-                  color="warning"
-                  startIcon={<EditIcon />}
-                  disabled={scannedCodes.length === 0 || !show}
-                  onClick={modificarCodigos}
-                /> */}
-                <div
-                  style={{
-                    width: '60px',
-                    height: 'auto',
-                    borderBottom:
-                      ButtonSeleccted === 'list' ? `4px solid orange` : '0px'
-                  }}
-                  aria-disabled={scannedCodes.length === 0 || !show}
-                  onClick={modificarCodigos}
-                >
-                  <EditIcon
-                    color={ButtonSeleccted === 'list' ? 'warning' : 'secondary'}
-                    style={{ fontSize: '60px', marginRight: '25' }}
-                  />
-                </div>
-              </Grid>
-              <Grid item>
-                {/* <Button
-                  size="large"
-                  variant="contained"
-                  color="success"
-                  disabled={scannedCodes.length === 0 || show}
-                  startIcon={<Camera />}
-                  onClick={showScanner}
-                /> */}
-                <div
-                  style={{
-                    width: '70px',
-                    height: 'auto',
-                    borderBottom:
-                      ButtonSeleccted === 'scanner' ? '4px solid green' : '0px'
-                  }}
-                  aria-disabled={scannedCodes.length === 0 || show}
-                  onClick={showScanner}
-                >
-                  <Camera
-                    color={
-                      ButtonSeleccted === 'scanner' ? 'success' : 'secondary'
-                    }
-                    style={{ fontSize: '70px', marginRight: '25' }}
-                  />
-                </div>
-              </Grid>
-            </Grid>
-
-            {show && scanCounts ? (
-              scanCounts.map((code, index) => (
-                <Box key={index} sx={{ mt: 2 }}>
-                  <Grid container spacing={2}>
-                    <Grid item xs={3}>
-                      <Typography variant="h2">Código:</Typography>
-                      <Typography variant="h2">Cantidad:</Typography>
-                      <Typography variant="h2">Descripción:</Typography>
-                    </Grid>
-                    <Grid item xs={6}>
-                      <Typography variant="h2">{code.codigo}</Typography>
-                      <Typography variant="h2">{code.cantidad}</Typography>
-                      <Typography variant="h2">
-                        {CodigosNombres.find((x) => x.codigo === code.codigo)
-                          ?.desc_art || 'No se encontró el artículo'}
-                      </Typography>
-                    </Grid>
-                  </Grid>
-                </Box>
-              ))
-            ) : (
-              <Box></Box>
-            )}
-          </CardContent>
-        </Card>
-
-        {!show && scannedCodes.length > 0 ? (
-          <Card
-            sx={{
-              position: 'relative',
-              height: '90vh',
-              minHeight: 400,
-              overflow: 'auto',
-              mt: 2
-            }}
-          >
-            <CardContent>
-              <Table aria-label="simple table">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Código</TableCell>
-                    <TableCell align="left">Artículo</TableCell>
-                    <TableCell align="right">Cantidad</TableCell>
-                    <TableCell align="right">Eliminar</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {accumulatedData.map((row) => (
-                    <TableRow
-                      key={row.codigo}
-                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+      <Dialog
+        sx={{ overflow: 'hidden' }}
+        ref={dialogRef}
+        fullScreen
+        open={isOpen}
+        onClose={() => {}}
+      >
+        <Container sx={{ overflow: 'hidden' }}>
+          <Card sx={{ overflow: 'hidden' }}>
+            <CardContent sx={{ overflow: 'hidden' }}>
+              <Grid
+                sx={{ overflow: 'hidden' }}
+                container
+                spacing={2}
+                direction="row"
+                alignItems="flex-start"
+                justifyContent="space-between" // Agrega esta línea
+              >
+                <Grid item>
+                  <Box
+                    display="flex"
+                    alignItems="center"
+                    sx={{ overflow: 'hidden', paddingLeft: 2 }}
+                  >
+                    <Box
+                      sx={{
+                        width: '10vw',
+                        height: 'auto',
+                        paddingLeft: 2
+                      }}
+                      aria-disabled={scannedCodes.length === 0 || !show}
+                      onClick={() => setScannedCodes([])}
+                      onTouchStart={function () {
+                        document.getElementById('cleanButton').style.color =
+                          'red';
+                      }}
+                      onTouchEnd={function () {
+                        document.getElementById('cleanButton').style.color =
+                          'gray';
+                      }}
                     >
-                      <TableCell component="th" scope="row">
-                        {row.codigo}
-                      </TableCell>
-                      <TableCell align="left">
-                        {CodigosNombres.find((x) => x.codigo === row.codigo)
-                          ?.desc_art || 'No se encontró el artículo'}
-                      </TableCell>
-                      <TableCell align="left">
-                        <TextField
-                          error={CantidadEditando < 0}
-                          fullWidth
-                          margin="normal"
-                          autoFocus
-                          helperText={
-                            CantidadEditando < 0
-                              ? 'La cantidad debe ser mayor a 0'
-                              : ''
-                          }
-                          label={''}
-                          name="cantidad"
-                          onChange={(e) => handleChangeCantidad(e, row)}
-                          type="number"
-                          value={row.cantidad}
-                          variant="outlined"
-                          size="small"
-                        />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Button
-                          variant="contained"
-                          color="error"
-                          startIcon={<RemoveIcon />}
-                          onClick={() => handleDelete(row.codigo)}
-                        />
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                      <DeleteIcon
+                        id={'cleanButton'}
+                        color="secondary"
+                        sx={{ margin: '5' }}
+                        style={{ fontSize: '70px' }}
+                      />
+                    </Box>
+
+                    <Box
+                      alignContent={'center'}
+                      display="flex"
+                      alignItems="center"
+                      sx={{
+                        width: '10vw',
+                        height: 'auto',
+                        paddingLeft: 2,
+                        // borderBottom:
+                        //   ButtonSeleccted === 'list'
+                        //     ? `4px solid orange`
+                        //     : '0px',
+                        display: 'flex',
+                        justifyContent: 'center', // Centra horizontalmente
+                        alignItems: 'center' // Centra verticalmente
+                      }}
+                      aria-disabled={scannedCodes.length === 0 || !show}
+                      onClick={modificarCodigos}
+                    >
+                      <EditIcon
+                        color={
+                          ButtonSeleccted === 'list' ? 'warning' : 'secondary'
+                        }
+                        style={{ fontSize: '60px', marginRight: '25' }}
+                      />
+                    </Box>
+
+                    <Box
+                      sx={{
+                        width: '10vw',
+                        height: 'auto',
+                        paddingLeft: '0%',
+                        // borderBottom:
+                        //   ButtonSeleccted === 'scanner'
+                        //     ? '4px solid green'
+                        //     : '0px',
+                        display: 'flex',
+                        justifyContent: 'center', // Centra horizontalmente
+                        alignItems: 'center' // Centra verticalmente
+                      }}
+                      aria-disabled={scannedCodes.length === 0 || show}
+                      onClick={showScanner}
+                    >
+                      <Camera
+                        color={
+                          ButtonSeleccted === 'scanner'
+                            ? 'success'
+                            : 'secondary'
+                        }
+                        style={{ fontSize: '70px', marginRight: '25' }}
+                      />
+                    </Box>
+                  </Box>
+                  <Grid />
+                </Grid>
+                <Grid item>
+                  <div
+                    style={{
+                      width: '70px',
+                      height: 'auto'
+                    }}
+                    aria-disabled={scannedCodes.length === 0 || show}
+                    onClick={handleLogout}
+                  >
+                    <LogoutIcon
+                      style={{ fontSize: '70px', marginRight: '25' }}
+                    />
+                  </div>
+                </Grid>
+              </Grid>
+
+              {show && scanCounts ? (
+                scanCounts.map((code, index) => (
+                  <Box key={index} sx={{ mt: 2 }}>
+                    <Grid container spacing={2}>
+                      <Grid item xs={3}>
+                        <Typography variant="h2">Código:</Typography>
+                        <Typography variant="h2">Cantidad:</Typography>
+                        <Typography variant="h2">Descripción:</Typography>
+                      </Grid>
+                      <Grid item xs={6}>
+                        <Typography variant="h2">{code.codigo}</Typography>
+                        <Typography variant="h2">{code.cantidad}</Typography>
+                        <Typography variant="h2">
+                          {CodigosNombres.find((x) => x.codigo === code.codigo)
+                            ?.desc_art || 'No se encontró el artículo'}
+                        </Typography>
+                      </Grid>
+                    </Grid>
+                  </Box>
+                ))
+              ) : (
+                <Box></Box>
+              )}
             </CardContent>
           </Card>
-        ) : null}
 
-        {show && (
-          <Box sx={{ mt: 2 }}>
-            <div id="reader" ref={readerRef}></div>
-          </Box>
-        )}
-      </Container>
+          {!show && scannedCodes.length > 0 ? (
+            <Card
+              sx={{
+                position: 'relative',
+                height: '90vh',
+                minHeight: 400,
+                overflow: 'hidden',
+                mt: 2
+              }}
+            >
+              <CardContent>
+                <Table aria-label="simple table">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell>Código</TableCell>
+                      <TableCell align="left">Artículo</TableCell>
+                      <TableCell align="right">Cantidad</TableCell>
+                      <TableCell align="right">Eliminar</TableCell>
+                    </TableRow>
+                  </TableHead>
+                  <TableBody>
+                    {accumulatedData.map((row) => (
+                      <TableRow
+                        key={row.codigo}
+                        sx={{
+                          '&:last-child td, &:last-child th': { border: 0 }
+                        }}
+                      >
+                        <TableCell component="th" scope="row">
+                          {row.codigo}
+                        </TableCell>
+                        <TableCell align="left">
+                          {CodigosNombres.find((x) => x.codigo === row.codigo)
+                            ?.desc_art || 'No se encontró el artículo'}
+                        </TableCell>
+                        <TableCell align="left">
+                          <TextField
+                            error={CantidadEditando < 0}
+                            fullWidth
+                            margin="normal"
+                            autoFocus
+                            helperText={
+                              CantidadEditando < 0
+                                ? 'La cantidad debe ser mayor a 0'
+                                : ''
+                            }
+                            label={''}
+                            name="cantidad"
+                            onChange={(e) => handleChangeCantidad(e, row)}
+                            type="number"
+                            value={row.cantidad}
+                            variant="outlined"
+                            size="small"
+                          />
+                        </TableCell>
+                        <TableCell align="right">
+                          <Button
+                            variant="contained"
+                            color="error"
+                            startIcon={<RemoveIcon />}
+                            onClick={() => handleDelete(row.codigo)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {show && (
+            <Box sx={{ mt: 2, overflow: 'hidden' }}>
+              <Box
+                sx={{ height: '100%', overflow: 'hidden' }}
+                id="reader"
+                ref={readerRef}
+              ></Box>
+            </Box>
+          )}
+        </Container>
+      </Dialog>
     </>
   );
 }
