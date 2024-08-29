@@ -1,5 +1,5 @@
 import FormularioLogin from './FormularioLogin';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useReducer } from 'react';
 import ForgotPassword from './PasswordRecovery/ForgotPassword';
 import { ProductosEmpresa } from '../../interfaces/productosInterface';
 import { User } from '../../interfaces/responseInterface';
@@ -19,9 +19,13 @@ import { usePage } from 'src/hooks/usePage';
 import Cargando from 'src/components/Cargando';
 import { sucursalInterface } from 'src/interfaces/sucursalInterface';
 import { setInfoSucursal } from 'src/store/slices/Empresa';
+import { authReducer } from 'src/contexts/Auth/AuthReducer';
+import { APP } from 'src/config';
 
 const Login = () => {
+  const [LoginError, setLoginError] = useState(null);
   const { dispatch: dispatchSucursal } = usePage();
+  const [dispatch] = useReducer(authReducer, null);
   const navigate = useNavigate();
   const { login, token, sucursales, cambiarCadena } = useAuth();
   const [Vista, setVista] = useState<string>('Login');
@@ -44,6 +48,10 @@ const Login = () => {
     });
   const [credencialesUsuario, setCredencialesUusario] = useState<User>();
 
+  useEffect(() => {
+    localStorage.removeItem('AuthState');
+  }, []);
+
   const ActionFP = (e: any) => {
     e.preventDefault();
 
@@ -58,7 +66,7 @@ const Login = () => {
     try {
       const response = await login(credenciales);
 
-      if (response.status === 200) {
+      if (response.data.isSuccess) {
         const productos = await getProductosByData(
           response.data.result as ProductosEmpresa[]
         );
@@ -201,20 +209,20 @@ const Login = () => {
 
   const opcionesProductos = useMemo(
     () =>
-      Productos.map((producto) => ({
+      Productos?.map((producto) => ({
         value: producto.id_producto,
         desc: producto.desc_producto
       })),
-    [Productos]
+    [Productos!]
   );
 
   const opcionesSuc = useMemo(
     () =>
-      Sucursales.map((sucursal) => ({
+      Sucursales?.map((sucursal) => ({
         value: sucursal.clave_sucursal,
         desc: sucursal.nombre_corto.trim()
       })),
-    [Sucursales]
+    [Sucursales!]
   );
 
   const handleClose = () => {
@@ -248,10 +256,12 @@ const Login = () => {
       <div>
         <h3>{Vista === 'Login' ? 'Login' : 'Recuperar Contraseña'}</h3>
         {Vista === 'Login' ? (
-          <FormularioLogin
-            modelo={{ email: '', password: '', id_rol: 0 }}
-            onSubmit={async (valores) => await Login(valores)}
-          />
+          <>
+            <FormularioLogin
+              modelo={{ email: '', password: '', id_rol: 0 }}
+              onSubmit={async (valores) => await Login(valores)}
+            />
+          </>
         ) : (
           <ForgotPassword />
         )}

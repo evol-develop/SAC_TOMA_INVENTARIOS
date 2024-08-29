@@ -1,4 +1,12 @@
-import { Box, Card, Typography, Container, Alert, styled, Button } from '@mui/material';
+import {
+  Box,
+  Card,
+  Typography,
+  Container,
+  Alert,
+  styled,
+  Button
+} from '@mui/material';
 
 import Logo from 'src/components/LogoSign';
 
@@ -36,56 +44,58 @@ const LoginBasic = () => {
   useEffect(() => {
     if (authLocalState) {
       if (authLocalState.isAuthenticated) {
-        navigate('catalogos/tomaInventario');
+        navigate('/');
       }
     }
   }, []);
 
   return (
     <>
-
-
-        <>
-          <Helmet>
-            <title> {APP.NOMBRE} - Iniciar Sesión</title>
-          </Helmet>
-          <MainContent>
-            <TopWrapper>
-              <Container maxWidth="sm">
-                <Logo />
-                <Card
-                  sx={{
-                    mt: 3,
-                    px: 4,
-                    pt: 5,
-                    pb: 3
-                  }}
-                >
-                  <Box>
-                    <Typography
-                      variant="h2"
-                      sx={{
-                        mb: 1
-                      }}
-                    >
-                      {'Iniciar Sesión'}
-                    </Typography>
-                    <Typography
-                      variant="h4"
-                      color="text.secondary"
-                      fontWeight="normal"
-                      sx={{
-                        mb: 3
-                      }}
-                    >
-                      {'Ingresa la información de tu cuenta'}
-                    </Typography>
-                  </Box>
-                  {authState.error && (
-                    <Alert severity="error">{authState.error}</Alert>
-                  )}
-                  <Login />
-                  {/* <Box my={4}>
+      <>
+        <Helmet>
+          <title> {APP.NOMBRE} - Iniciar Sesión</title>
+        </Helmet>
+        <MainContent>
+          <TopWrapper>
+            <Container maxWidth="sm">
+              <Logo />
+              <Card
+                sx={{
+                  mt: 3,
+                  px: 4,
+                  pt: 5,
+                  pb: 3
+                }}
+              >
+                <p style={{fontSize: '9px', color: 'gray'}}>
+                  <span>{`v.${APP.VERSION}`}</span> <br />
+                  <span>{`FC. - ${APP.FECHA_COMPILACION}`}</span>
+                </p>
+                <Box>
+                  <Typography
+                    variant="h2"
+                    sx={{
+                      mb: 1
+                    }}
+                  >
+                    {'Iniciar Sesión'}
+                  </Typography>
+                  <Typography
+                    variant="h4"
+                    color="text.secondary"
+                    fontWeight="normal"
+                    sx={{
+                      mb: 3
+                    }}
+                  >
+                    {'Ingresa la información de tu cuenta'}
+                  </Typography>
+                </Box>
+                {authState.error && (
+                  <Alert severity="error">{authState.error}</Alert>
+                )}
+                <Login />
+                {/* <Box my={4}>
                                 <Typography
                                     component="span"
                                     variant="subtitle2"
@@ -98,11 +108,11 @@ const LoginBasic = () => {
                                     <b>Registrate</b>
                                 </Link>
                             </Box> */}
-                </Card>
-              </Container>
-            </TopWrapper>
-          </MainContent>
-        </>
+              </Card>
+            </Container>
+          </TopWrapper>
+        </MainContent>
+      </>
     </>
   );
 };

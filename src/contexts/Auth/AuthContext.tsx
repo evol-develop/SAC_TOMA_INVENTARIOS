@@ -14,7 +14,7 @@ import { setInfoEmpresa } from 'src/store/slices/Empresa';
 import { AnyAction } from '@reduxjs/toolkit';
 import { Axios, AxiosResponse } from 'axios';
 import { status } from 'nprogress';
-import { createSlot } from 'src/store/slices/page'
+import { createSlot } from 'src/store/slices/page';
 import { userResult } from 'src/interfaces/responseInterface';
 import { sucursalInterface } from 'src/interfaces/sucursalInterface';
 import { respuestaAutenticacion } from 'src/interfaces/respuestaAuthInterface';
@@ -34,8 +34,10 @@ const initialAuthState: AuthState = {
   error: null
 };
 
-type Response = (valores: User) => Promise<AxiosResponse<ResponseInterface, any>>;
-type Response2  =()=> Promise<AxiosResponse<ResponseInterface, any>>;
+type Response = (
+  valores: User
+) => Promise<AxiosResponse<ResponseInterface, any>>;
+type Response2 = () => Promise<AxiosResponse<ResponseInterface, any>>;
 
 const initialLocalAuthState = JSON.parse(
   localStorage.getItem('AuthState')
@@ -48,20 +50,23 @@ export const AuthContext = createContext({
   authLocalState: initialLocalAuthState,
   logout: () => Promise.resolve(),
   login: {} as Response,
-  token:  {} as Response,
+  token: {} as Response,
   sucursales: {} as Response2,
-  cambiarCadena: {} as Response,
+  cambiarCadena: {} as Response
 });
-
 
 export const AuthProvider = ({ children }: any) => {
   const [authState, dispatch] = useReducer(authReducer, initialAuthState);
- 
+
   const [authLocalState, setAuthLocalState] = useState(
     JSON.parse(localStorage.getItem('AuthState')) as AuthState
   );
   const navigate = useNavigate();
-  const { dispatch: dispatchPermisos, dispatch: dispatchEmpresa ,dispatch: dispatchSucursal} = usePage();
+  const {
+    dispatch: dispatchPermisos,
+    dispatch: dispatchEmpresa,
+    dispatch: dispatchSucursal
+  } = usePage();
 
   useEffect(() => {
     //console.log('authLocalState', authLocalState);
@@ -77,23 +82,23 @@ export const AuthProvider = ({ children }: any) => {
             const response = await axios.get(`/api/cuentas/getUser`);
 
             if (response.data.isSuccess) {
-
-              var data = await getAuth(response.data.result as respuestaAutenticacion);
+              var data = await getAuth(
+                response.data.result as respuestaAutenticacion
+              );
 
               const userResponse = response.data.result;
-  
-              const userInfo : UserInterface ={
-              username: "",
-              nombre: "",
-              accessToken: authstateInicial.user.accessToken,
-              email: data.usuario.email.toString(),
-              role: data.usuario.id_rol.toString(),
-              avatar: '',
-              permisos: null,
-              expiration: data.expiracion.toString(),
-              empresa: data.empresa as EmpresaInterface,
-              sucursal: data.sucursal as sucursalInterface,
-            
+
+              const userInfo: UserInterface = {
+                username: '',
+                nombre: '',
+                accessToken: authstateInicial.user.accessToken,
+                email: data.usuario.email.toString(),
+                role: data.usuario.id_rol.toString(),
+                avatar: '',
+                permisos: null,
+                expiration: data.expiracion.toString(),
+                empresa: data.empresa as EmpresaInterface,
+                sucursal: data.sucursal as sucursalInterface
               };
 
               dispatch({
@@ -118,7 +123,6 @@ export const AuthProvider = ({ children }: any) => {
               dispatchSucursal(
                 setInfoSucursal(userInfo.sucursal as sucursalInterface)
               );
-
             } else {
               dispatch({
                 type: 'INITIALIZE',
@@ -160,25 +164,24 @@ export const AuthProvider = ({ children }: any) => {
   }, [authState]);
 
   const token = async (valores: User) => {
-
     try {
-
       const response = await axios.post<ResponseInterface>(
-        '/api/cuentas/construirToken',valores
+        '/api/cuentas/construirToken',
+        valores
       );
 
       var data = await getAuth(response.data.result as respuestaAutenticacion);
 
-      const userAuthenticated : UserInterface ={
-      username: "",
-      nombre: "",
-      accessToken:data.token.toString(),
-      email: data.usuario.email.toString(),
-      role: data.usuario.id_rol.toString(),
-      avatar: '',
-      permisos: null,
-      expiration: data.expiracion.toString(),
-      empresa: data.empresa as EmpresaInterface,
+      const userAuthenticated: UserInterface = {
+        username: '',
+        nombre: '',
+        accessToken: data.token.toString(),
+        email: data.usuario.email.toString(),
+        role: data.usuario.id_rol.toString(),
+        avatar: '',
+        permisos: null,
+        expiration: data.expiracion.toString(),
+        empresa: data.empresa as EmpresaInterface
       };
 
       dispatch({ type: 'LOGIN', payload: { user: userAuthenticated } });
@@ -196,47 +199,51 @@ export const AuthProvider = ({ children }: any) => {
       // );
 
       dispatchEmpresa(
-      setInfoEmpresa(userAuthenticated.empresa as EmpresaInterface)
-      );
-
-     return response;
-     
-    }catch(error){
-      
-    }
-  }
-
-  const sucursales = async () => {
-
-    try {
-      const response = await axios.get<ResponseInterface>('/api/sucursales/getSucursales' );
-
-     return response;
-    }catch(error){
-    }
-  }
-
-  const cambiarCadena = async (valores: User) => {
-
-    try {
-      const response = await axios.post<ResponseInterface>('/api/cuentas/cambiarCadena',valores
-      );
-
-     return response;
-     
-    }catch(error){
-    }
-  }
-
-  const login = async (valores: User) => {
-
-    try {
-      const response = await axios.post<ResponseInterface>(
-        '/api/cuentas/login',valores
+        setInfoEmpresa(userAuthenticated.empresa as EmpresaInterface)
       );
 
       return response;
+    } catch (error) {}
+  };
 
+  const sucursales = async () => {
+    try {
+      const response = await axios.get<ResponseInterface>(
+        '/api/sucursales/getSucursales'
+      );
+
+      return response;
+    } catch (error) {}
+  };
+
+  const cambiarCadena = async (valores: User) => {
+    try {
+      const response = await axios.post<ResponseInterface>(
+        '/api/cuentas/cambiarCadena',
+        valores
+      );
+
+      return response;
+    } catch (error) {}
+  };
+
+  const login = async (valores: User) => {
+    try {
+      const response = await axios.post<ResponseInterface>(
+        '/api/cuentas/login',
+        valores
+      );
+
+      if (response.data.isSuccess) {
+        return response;
+      } else {
+        dispatch({
+          type: 'LOGIN_ERROR',
+          payload: {
+            error: 'Usuario / Password incorrecto, favor de verificar.'
+          }
+        });
+      }
     } catch (error) {
       dispatch({
         type: 'LOGIN_ERROR',
