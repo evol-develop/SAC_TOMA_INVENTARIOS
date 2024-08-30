@@ -12,6 +12,7 @@ import {
   Grid,
   IconButton,
   InputLabel,
+  LinearProgress,
   OutlinedInput,
   Table,
   TextField,
@@ -48,6 +49,12 @@ import './estilos.css';
 import ScannerIcon from '@mui/icons-material/Scanner';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import PublishIcon from '@mui/icons-material/Publish';
+import { useAppSelector } from 'src/hooks/storeHooks';
+import { RootState } from 'src/store/store';
+import { sucursalInterface } from 'src/interfaces/sucursalInterface';
+import { Loading } from '../Loading';
+import { usePage } from 'src/hooks/usePage';
+import { setIsLoading } from 'src/store/slices/page';
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
 
@@ -73,7 +80,7 @@ function Scandit() {
   const [TypedCode, setTypedCode] = useState('');
   const { authState, authLocalState, logout } = useAuth();
   const navigate = useNavigate();
-
+  const { dispatch } = usePage();
   const [isInitialized, setIsInitialized] = useState(false);
 
   const readerRef = useRef(null);
@@ -90,6 +97,10 @@ function Scandit() {
   const beepSoundRef = useRef(null);
 
   const [ButtonSeleccted, setButtonSeleccted] = useState('Scanner' || 'Camera');
+
+  const dataSucursal = useAppSelector(
+    (state: RootState) => state.empresa.sucursal
+  ) as unknown as sucursalInterface;
 
   //lista de 30 elementos con propiedades codigo, cantidad y desc_art
   const [CodigosNombresPrubas, setCodigosNombresPruebas] = useState([
@@ -453,29 +464,32 @@ function Scandit() {
   //   });
   // };
 
+  const isLoading = useAppSelector((state: RootState) => state.page.isLoading);
+
   const GuardaInventario = async () => {
+    dispatch(setIsLoading(true));
 
     if (scannedCodes.length === 0) {
       alert('No hay códigos escaneados');
-      return
+      dispatch(setIsLoading(false));
+      return;
     }
 
-    console.log(scannedCodes);
-    //ejemplo:
-    //{
-    //  {codigo: "1000", cantidad: 1}
-    //  {codigo: "1001", cantidad: 1}
-    //}
-
     const response = await axios.post<ResponseInterface>(
-      '/api/colores/guardarInventario',
+      `/api/colores/guardarInventario/${dataSucursal.clave_sucursal}`,
       scannedCodes
     );
 
     if (response.data.isSuccess) {
       setScannedCodes([]);
+      setScanCounts([]);
+      setCodigosNombres([]);
+      dispatch(setIsLoading(false));
+    } else {
+      alert('Error al guardar el inventario, intentalo de nuevo');
+      dispatch(setIsLoading(false));
     }
-  }
+  };
 
   return (
     <>
@@ -650,6 +664,19 @@ function Scandit() {
             </CardContent>
           </Card>
 
+          {isLoading && (
+            <>
+              <p>Hola</p>
+              <LinearProgress />
+            </>
+          )}
+
+          {/* {CodigosNombres && CodigosNombres.map((x) => (
+            <p key={x.codigo}>
+              {x.codigo} - {x.desc_art}
+            </p>
+          ))} */}
+
           {true && (
             <>
               <Card
@@ -758,7 +785,7 @@ function Scandit() {
                                 zIndex: 1
                               }}
                             >
-                              Código
+                              #
                             </TableCell>
                             <TableCell
                               sx={{
@@ -780,7 +807,7 @@ function Scandit() {
                               }}
                               align="right"
                             >
-                              Cantidad
+                              Cantid
                             </TableCell>
                             <TableCell
                               sx={{
@@ -791,7 +818,7 @@ function Scandit() {
                               }}
                               align="right"
                             >
-                              Existencias
+                              Exist.
                             </TableCell>
                             <TableCell
                               sx={{

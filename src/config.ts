@@ -1,8 +1,8 @@
 export const APP={
     NOMBRE:'Toma de Inventarios', 
     DESCRIPCION:'Toma de Inventarios',
-    VERSION:'3.5.14',
-    FECHA_COMPILACION: '28/08/2024',
-    URL_API:'https://localhost:44396/',
-    //URL_API:'https://sacwebglobal.azurewebsites.net/',
+    VERSION:'3.5.16',
+    FECHA_COMPILACION: '30/08/2024',
+    //URL_API:'https://localhost:44396/',
+    URL_API:'https://sacwebglobal.azurewebsites.net/',
 }
