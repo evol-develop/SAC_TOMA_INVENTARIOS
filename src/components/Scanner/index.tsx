@@ -4,10 +4,13 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
 import { Camera } from '@mui/icons-material';
 import {
+  Alert,
   AppBar,
   Box,
   Button,
+  Collapse,
   Dialog,
+  DialogContent,
   FormControl,
   Grid,
   IconButton,
@@ -55,6 +58,11 @@ import { sucursalInterface } from 'src/interfaces/sucursalInterface';
 import { Loading } from '../Loading';
 import { usePage } from 'src/hooks/usePage';
 import { setIsLoading } from 'src/store/slices/page';
+import { ToastCompletado, ToastError } from '../SweetAlert2/alerts';
+import { set } from 'nprogress';
+import CheckIcon from '@mui/icons-material/Check';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
 
@@ -101,6 +109,8 @@ function Scandit() {
   const dataSucursal = useAppSelector(
     (state: RootState) => state.empresa.sucursal
   ) as unknown as sucursalInterface;
+
+  const [AbrirSegundoModal, setAbrirSegundoModal] = useState(false);
 
   //lista de 30 elementos con propiedades codigo, cantidad y desc_art
   const [CodigosNombresPrubas, setCodigosNombresPruebas] = useState([
@@ -198,9 +208,7 @@ function Scandit() {
           ]);
         }
       });
-    } catch (error) {
-      //alert('Error  Scandit SDK ' + error);
-    }
+    } catch (error) {}
   };
 
   async function getCode(code: string) {
@@ -450,8 +458,6 @@ function Scandit() {
       }
     });
 
-    console.log(registros);
-
     setScannedCodes([...registros]);
   };
 
@@ -466,12 +472,34 @@ function Scandit() {
 
   const isLoading = useAppSelector((state: RootState) => state.page.isLoading);
 
+  const [TodoBien, setTodoBien] = useState(false);
+  const [SinRegistros, setSinRegistros] = useState(false);
+
+  useEffect(() => {
+    if (TodoBien) {
+      setTimeout(() => {
+        setTodoBien(false);
+        setAbrirSegundoModal(false);
+      }, 5000);
+    }
+  }, [TodoBien]);
+
+  useEffect(() => {
+    if (SinRegistros) {
+      setTimeout(() => {
+        setSinRegistros(false);
+      }, 5000);
+    }
+  }, [SinRegistros]);
+
   const GuardaInventario = async () => {
     dispatch(setIsLoading(true));
 
     if (scannedCodes.length === 0) {
-      alert('No hay códigos escaneados');
+      ToastError('No hay códigos escaneados');
       dispatch(setIsLoading(false));
+      setSinRegistros(true);
+
       return;
     }
 
@@ -485,11 +513,27 @@ function Scandit() {
       setScanCounts([]);
       setCodigosNombres([]);
       dispatch(setIsLoading(false));
+      setTodoBien(true);
     } else {
-      alert('Error al guardar el inventario, intentalo de nuevo');
       dispatch(setIsLoading(false));
+      setTodoBien(false);
     }
   };
+
+  const AbreSegundoModal = () => {
+    if (scannedCodes.length === 0) {
+      setSinRegistros(true);
+      return;
+    }
+
+    setAbrirSegundoModal(true);
+  };
+
+  const LimpiaData = () => {
+    setScannedCodes([]);
+    setScanCounts([]);
+    setCodigosNombres([]);
+  }
 
   return (
     <>
@@ -532,7 +576,7 @@ function Scandit() {
                         alignItems: 'center' // Centra verticalmente
                       }}
                       aria-disabled={scannedCodes.length === 0 || !show}
-                      onClick={() => setScannedCodes([])}
+                      onClick={LimpiaData}
                       onTouchStart={function () {
                         document.getElementById('cleanButton').style.color =
                           'red';
@@ -608,7 +652,7 @@ function Scandit() {
                         alignItems: 'center' // Centra verticalmente
                       }}
                       aria-disabled={scannedCodes.length === 0 || show}
-                      onClick={GuardaInventario}
+                      onClick={AbreSegundoModal}
                     >
                       <PublishIcon
                         color={'primary'}
@@ -664,13 +708,6 @@ function Scandit() {
             </CardContent>
           </Card>
 
-          {isLoading && (
-            <>
-              <p>Hola</p>
-              <LinearProgress />
-            </>
-          )}
-
           {/* {CodigosNombres && CodigosNombres.map((x) => (
             <p key={x.codigo}>
               {x.codigo} - {x.desc_art}
@@ -707,6 +744,7 @@ function Scandit() {
                           Código
                         </InputLabel>
                         <OutlinedInput
+                          autoFocus
                           autoComplete="off"
                           id="outlined-adornment-password"
                           endAdornment={
@@ -918,6 +956,281 @@ function Scandit() {
               </Card>
             </>
           )}
+        </Container>
+      </Dialog>
+
+      <Dialog
+        sx={{ overflow: 'hidden' }}
+        fullScreen
+        open={AbrirSegundoModal}
+        onClose={() => {}}
+      >
+        <Container sx={{ overflow: 'hidden' }}>
+          <Card
+            sx={{ overflow: 'hidden', marginTop: '2vh', marginBottom: '1vh' }}
+          >
+            <CardContent sx={{ overflow: 'hidden' }}>
+              <Grid
+                sx={{ overflow: 'hidden' }}
+                container
+                spacing={1}
+                direction="row"
+                alignItems="flex-start"
+                justifyContent="space-between" // Agrega esta línea
+              >
+                <Grid item>
+                  <div
+                    style={{
+                      width: '95px',
+                      height: 'auto',
+                      display: 'flex',
+                      justifyContent: 'center', // Centra horizontalmente
+                      alignItems: 'center', // Centra verticalmente
+                      userSelect: 'none'
+                    }}
+                    aria-disabled={scannedCodes.length === 0 || show}
+                    onClick={() => setAbrirSegundoModal(false)}
+                  >
+                    <ArrowBackIcon />
+                    Regresar
+                  </div>
+                  <Grid />
+                </Grid>
+                <Grid item>
+                  <div
+                    style={{
+                      width: '85px',
+                      height: 'auto',
+                      display: 'flex',
+                      justifyContent: 'center', // Centra horizontalmente
+                      alignItems: 'center', // Centra verticalmente
+                      userSelect: 'none',
+                      textAlign: 'center'
+                    }}
+                    aria-disabled={scannedCodes.length === 0 || show}
+                    onClick={() => setAbrirSegundoModal(false)}
+                  >
+                    Preview Inventario Final
+                  </div>
+                  <Grid />
+                </Grid>
+                <Grid item>
+                  <div
+                    style={{
+                      width: '85px',
+                      height: 'auto',
+                      display: 'flex',
+                      justifyContent: 'center', // Centra horizontalmente
+                      alignItems: 'center', // Centra verticalmente
+                      color: 'green',
+                      userSelect: 'none'
+                    }}
+                    aria-disabled={scannedCodes.length === 0 || show}
+                    onClick={() => GuardaInventario()}
+                  >
+                    <CheckIcon />
+                    Confirmar inventario
+                  </div>
+                </Grid>
+              </Grid>
+            </CardContent>
+          </Card>
+
+          {isLoading && (
+            <>
+              <LinearProgress />
+            </>
+          )}
+
+          <Collapse in={TodoBien}>
+            <Alert
+              action={
+                <IconButton
+                  aria-label="close"
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    setTodoBien(false);
+                  }}
+                >
+                  <CloseIcon fontSize="inherit" />
+                </IconButton>
+              }
+              sx={{ mb: 2 }}
+            >
+              Datos guardados correctamente
+            </Alert>
+          </Collapse>
+
+          <Collapse in={SinRegistros}>
+            <Alert
+              severity="warning"
+              action={
+                <IconButton
+                  aria-label="close"
+                  color="inherit"
+                  size="small"
+                  onClick={() => {
+                    setSinRegistros(false);
+                  }}
+                >
+                  <CloseIcon fontSize="inherit" />
+                </IconButton>
+              }
+              sx={{ mb: 2 }}
+            >
+              No hay registros para subir
+            </Alert>
+          </Collapse>
+
+          <>
+            <Card
+              sx={{
+                position: 'relative',
+                height: '100vh',
+                minHeight: 400,
+                mt: 0
+              }}
+            >
+              <CardContent>
+                <Box sx={{ flexGrow: 1 }}>
+                  <Box sx={{ maxHeight: '55vh', overflowY: 'scroll' }}>
+                    <Table
+                      size="small"
+                      className="table table-responsive"
+                      sx={{ overflow: 'auto' }}
+                    >
+                      <TableHead>
+                        <TableRow>
+                          <TableCell
+                            sx={{
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'background.paper',
+                              zIndex: 1
+                            }}
+                          >
+                            #
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'background.paper',
+                              zIndex: 1
+                            }}
+                            align="left"
+                          >
+                            Artículo
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'background.paper',
+                              zIndex: 1
+                            }}
+                            align="right"
+                          >
+                            Mov
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'background.paper',
+                              zIndex: 1
+                            }}
+                            align="right"
+                          >
+                            Cant. Afect.
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'background.paper',
+                              zIndex: 1
+                            }}
+                            align="right"
+                          >
+                            Exist. Fin
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'background.paper',
+                              zIndex: 1
+                            }}
+                            align="right"
+                          ></TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {accumulatedData.map((row) => (
+                          <TableRow
+                            key={row.codigo}
+                            sx={{
+                              fontSize: '0.2rem',
+                              '&:last-child td, &:last-child th': {
+                                border: 0
+                              }
+                            }}
+                          >
+                            <TableCell
+                              component="th"
+                              scope="row"
+                              sx={{ fontSize: '0.6rem' }}
+                            >
+                              {row.codigo}
+                            </TableCell>
+                            <TableCell align="left" sx={{ fontSize: '0.6rem' }}>
+                              {CodigosNombres.find(
+                                (x) => x.codigo === row.codigo
+                              )?.desc_art || 'No se encontró el artículo'}
+                            </TableCell>
+                            <TableCell align="left" sx={{ fontSize: '0.6rem' }}>
+                              {CodigosNombres.find(
+                                (x) => x.codigo === row.codigo
+                              )?.existencia < row.cantidad
+                                ? 'Entrada'
+                                : CodigosNombres.find(
+                                    (x) => x.codigo === row.codigo
+                                  )?.existencia > row.cantidad
+                                ? 'Salida'
+                                : 'N/M'}
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ fontSize: '0.6rem' }}
+                            >
+                              {CodigosNombres.find(
+                                (x) => x.codigo === row.codigo
+                              )?.existencia < row.cantidad
+                                ? row.cantidad -
+                                  CodigosNombres.find(
+                                    (x) => x.codigo === row.codigo
+                                  )?.existencia
+                                : CodigosNombres.find(
+                                    (x) => x.codigo === row.codigo
+                                  )?.existencia - row.cantidad}
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ fontSize: '0.6rem' }}
+                            >
+                              {row.cantidad}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+                </Box>
+              </CardContent>
+            </Card>
+          </>
         </Container>
       </Dialog>
     </>

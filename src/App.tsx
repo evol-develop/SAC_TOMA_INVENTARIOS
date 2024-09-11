@@ -7,6 +7,8 @@ import { SnackbarProvider } from 'notistack';
 import ThemeProvider from './theme/ThemeProvider';
 import { CssBaseline } from '@mui/material';
 
+
+
 const App = () => {
 
   const content = useRoutes(routes);
