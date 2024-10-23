@@ -204,37 +204,48 @@ function Scandit() {
         if (scannedData) {
           setScannedCodes((prevCodes) => [
             ...prevCodes,
-            { codigo: scannedData, cantidad: 1 }
+            { codigo: scannedData.trimEnd().trimStart(), cantidad: 1 }
           ]);
         }
       });
     } catch (error) {}
   };
 
-  async function getCode(code: string) {
-    if (
-      CodigosNombres.find((element) => element.codigo === code)?.desc_art ===
-      undefined
-    ) {
+  //Obtiene la descripcion del articulo y la existencia
+  const [codigosNombres, setcodigosNombres] = useState([]);
+
+async function getCode(code: string) {
+  code = code.trimEnd().trimStart();
+
+  let art = codigosNombres.find((x) => x.codigo === code);
+
+  if (!art) {
+    try {
       const response = await axios.post<ResponseInterface>(
         `/api/colores/leerCodigo/${code}`
       );
 
-      console.log(response);
-      console.log(response.data.result.articulo.desc_art.trim());
-      console.log(response.data.result.existencia);
-
       let registro = {
         codigo: code,
         desc_art: response.data.result.articulo.desc_art.trim(),
-        existencia: response.data.result.existencia
+        existencia: response.data.result.existencia,
       };
 
-      let prev = [...CodigosNombres];
-
-      setCodigosNombres([...prev, registro]);
+      // Evitar múltiples actualizaciones no controladas
+      setCodigosNombres((prev) => {
+        const exists = prev.some((x) => x.codigo === code);
+        if (!exists) {
+          return [...prev, registro];
+        }
+        return prev;
+      });
+    } catch (error) {
+      console.error("Error fetching code:", error);
     }
   }
+}
+
+  
   const [isDialogMounted, setIsDialogMounted] = useState(false);
 
   useEffect(() => {
@@ -307,7 +318,6 @@ function Scandit() {
 
     // Verificar si el archivo de audio se puede cargar
     beepSoundRef.current.oncanplaythrough = () => {
-      //console.log('Audio cargado correctamente.');
     };
 
     beepSoundRef.current.onerror = (error) => {
@@ -330,13 +340,15 @@ function Scandit() {
     // Inicializar el escáner sin iniciar la cámara
     readerRef.current = new Html5Qrcode('reader');
 
-    const onScanSuccess = (qrCodeMessage) => {
+    const onScanSuccess = (qrCodeMessage: string) => {
       const now = new Date().getTime();
 
-      if (LastScan && now - LastScan < 2000) {
+      if (LastScan && now - LastScan < 3000) {
         //alert('Espere 2 segundos antes de escanear otro código');
         return;
       }
+
+      qrCodeMessage = qrCodeMessage.trimEnd().trimStart();
 
       setScannedCodes((prevCodes) => [
         ...prevCodes,
@@ -406,10 +418,10 @@ function Scandit() {
 
     if (scannedCodes.length > 0) {
       const lastScannedCode = scannedCodes[scannedCodes.length - 1];
-      const lastCode = lastScannedCode.codigo;
+      const lastCode = lastScannedCode.codigo.trim();
       const lastCount = counts[lastCode] || 0;
 
-      setScanCounts([{ codigo: lastCode, cantidad: lastCount }]);
+      setScanCounts([{ codigo: lastCode.trim(), cantidad: lastCount }]);
 
       getCode(lastCode);
     } else {
@@ -431,13 +443,13 @@ function Scandit() {
   });
 
   const accumulatedData = Object.keys(accumulatedCounts).map((codigo) => ({
-    codigo: codigo,
+    codigo: codigo.trim(),
     cantidad: accumulatedCounts[codigo]
   }));
 
   const handleDelete = (codigo) => {
     const indexToDelete = scannedCodes.findIndex(
-      (code) => code.codigo === codigo
+      (code) => code.codigo === codigo.trim()
     );
     if (indexToDelete !== -1) {
       const updatedScannedCodes = [...scannedCodes];
@@ -533,7 +545,11 @@ function Scandit() {
     setScannedCodes([]);
     setScanCounts([]);
     setCodigosNombres([]);
-  }
+  };
+
+  useEffect(() => {
+  }, [CodigosNombres]);
+
 
   return (
     <>
@@ -695,7 +711,7 @@ function Scandit() {
                         <Typography variant="body1">{code.codigo}</Typography>
                         <Typography variant="body1">{code.cantidad}</Typography>
                         <Typography variant="body1">
-                          {CodigosNombres.find((x) => x.codigo === code.codigo)
+                          {CodigosNombres?.find((x) => x.codigo === code.codigo)
                             ?.desc_art || 'No se encontró el artículo'}
                         </Typography>
                       </Grid>
@@ -756,7 +772,7 @@ function Scandit() {
 
                                 setScannedCodes((prevCodes) => [
                                   ...prevCodes,
-                                  { codigo: TypedCode, cantidad: 1 }
+                                  { codigo: TypedCode.trim(), cantidad: 1 }
                                 ]);
 
                                 setTypedCode('');
@@ -784,7 +800,7 @@ function Scandit() {
                             if (e.key === 'Enter') {
                               setScannedCodes((prevCodes) => [
                                 ...prevCodes,
-                                { codigo: TypedCode, cantidad: 1 }
+                                { codigo: TypedCode.trim(), cantidad: 1 }
                               ]);
 
                               setTypedCode('');
@@ -1042,6 +1058,10 @@ function Scandit() {
             </>
           )}
 
+          {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
+          {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
+          {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
+
           <Collapse in={TodoBien}>
             <Alert
               action={
@@ -1083,22 +1103,76 @@ function Scandit() {
             </Alert>
           </Collapse>
 
+          {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
+          {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
+          {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
           <>
             <Card
               sx={{
                 position: 'relative',
                 height: '100vh',
                 minHeight: 400,
-                mt: 0
+                mt: 0,
+                overflow: 'scroll'
               }}
             >
               <CardContent>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    textAlign: 'center',
+                    flexWrap: 'wrap' // Permite que los elementos se bajen si es necesario
+                  }}
+                >
+                  <span
+                    style={{
+                      fontSize: '8px',
+                      marginRight: '1rem',
+                      marginLeft: '1rem',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    CC - Cantidad Capturada
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '8px',
+                      marginRight: '1rem',
+                      marginLeft: '1rem',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    EA - Existencia Actual
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '8px',
+                      marginRight: '1rem',
+                      marginLeft: '1rem',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    CA - Cantidad Afectada
+                  </span>
+                  <span
+                    style={{
+                      fontSize: '8px',
+                      marginRight: '1rem',
+                      marginLeft: '1rem',
+                      whiteSpace: 'nowrap'
+                    }}
+                  >
+                    EF - Existencia Final
+                  </span>
+                </Box>
                 <Box sx={{ flexGrow: 1 }}>
-                  <Box sx={{ maxHeight: '55vh', overflowY: 'scroll' }}>
+                  <Box sx={{ maxHeight: '55vh', overflow: 'auto' }}>
                     <Table
                       size="small"
                       className="table table-responsive"
-                      sx={{ overflow: 'auto' }}
+                      sx={{ overflow: 'scroll', minWidth: 800 }}
                     >
                       <TableHead>
                         <TableRow>
@@ -1130,7 +1204,7 @@ function Scandit() {
                               backgroundColor: 'background.paper',
                               zIndex: 1
                             }}
-                            align="right"
+                            align="left"
                           >
                             Mov
                           </TableCell>
@@ -1143,7 +1217,7 @@ function Scandit() {
                             }}
                             align="right"
                           >
-                            Cant. Afect.
+                            CC
                           </TableCell>
                           <TableCell
                             sx={{
@@ -1154,7 +1228,29 @@ function Scandit() {
                             }}
                             align="right"
                           >
-                            Exist. Fin
+                            EA
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'background.paper',
+                              zIndex: 1
+                            }}
+                            align="right"
+                          >
+                            CA
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              position: 'sticky',
+                              top: 0,
+                              backgroundColor: 'background.paper',
+                              zIndex: 1
+                            }}
+                            align="right"
+                          >
+                            EF
                           </TableCell>
                           <TableCell
                             sx={{
@@ -1200,6 +1296,22 @@ function Scandit() {
                                   )?.existencia > row.cantidad
                                 ? 'Salida'
                                 : 'N/M'}
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ fontSize: '0.6rem' }}
+                            >
+                              {row.cantidad}
+                            </TableCell>
+                            <TableCell
+                              align="right"
+                              sx={{ fontSize: '0.6rem' }}
+                            >
+                              {
+                                CodigosNombres.find(
+                                  (x) => x.codigo === row.codigo
+                                )?.existencia
+                              }
                             </TableCell>
                             <TableCell
                               align="right"
