@@ -62,6 +62,8 @@ import { ToastCompletado, ToastError } from '../SweetAlert2/alerts';
 import { set } from 'nprogress';
 import CheckIcon from '@mui/icons-material/Check';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import { ExpandLess } from '@mui/icons-material';
 
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
@@ -106,6 +108,8 @@ function Scandit() {
 
   const [ButtonSeleccted, setButtonSeleccted] = useState('Scanner' || 'Camera');
 
+  const [ActualCode, setActualCode] = useState('');
+
   const dataSucursal = useAppSelector(
     (state: RootState) => state.empresa.sucursal
   ) as unknown as sucursalInterface;
@@ -146,7 +150,11 @@ function Scandit() {
     { codigo: '1029', desc_art: 'No encontrado', cantidad: 1 },
     { codigo: '1030', desc_art: 'No encontrado', cantidad: 1 }
   ]);
+  const [openRows, setOpenRows] = useState({});
 
+  const handleRowClick = (index) => {
+    setOpenRows((prev) => ({ ...prev, [index]: !prev[index] }));
+  };
   const initScanditSdk = async () => {
     try {
       await ScanditSDK.configure(
@@ -214,38 +222,38 @@ function Scandit() {
   //Obtiene la descripcion del articulo y la existencia
   const [codigosNombres, setcodigosNombres] = useState([]);
 
-async function getCode(code: string) {
-  code = code.trimEnd().trimStart();
+  async function getCode(code: string) {
+    code = code.trimEnd().trimStart();
 
-  let art = codigosNombres.find((x) => x.codigo === code);
+    let art = codigosNombres.find((x) => x.codigo === code);
 
-  if (!art) {
-    try {
-      const response = await axios.post<ResponseInterface>(
-        `/api/colores/leerCodigo/${code}`
-      );
+    if (!art) {
+      try {
+        const response = await axios.post<ResponseInterface>(
+          `/api/colores/leerCodigo/${code}`
+        );
 
-      let registro = {
-        codigo: code,
-        desc_art: response.data.result.articulo.desc_art.trim(),
-        existencia: response.data.result.existencia,
-      };
+        let registro = {
+          codigo: code,
+          desc_art: response.data.result.articulo.desc_art.trim(),
+          existencia: response.data.result.existencia,
+          fecha_ultimo_inventario: response.data.result.fecha_ultimo_inventario
+        };
 
-      // Evitar múltiples actualizaciones no controladas
-      setCodigosNombres((prev) => {
-        const exists = prev.some((x) => x.codigo === code);
-        if (!exists) {
-          return [...prev, registro];
-        }
-        return prev;
-      });
-    } catch (error) {
-      console.error("Error fetching code:", error);
+        // Evitar múltiples actualizaciones no controladas
+        setCodigosNombres((prev) => {
+          const exists = prev.some((x) => x.codigo === code);
+          if (!exists) {
+            return [...prev, registro];
+          }
+          return prev;
+        });
+      } catch (error) {
+        console.error('Error fetching code:', error);
+      }
     }
   }
-}
 
-  
   const [isDialogMounted, setIsDialogMounted] = useState(false);
 
   useEffect(() => {
@@ -312,13 +320,13 @@ async function getCode(code: string) {
       console.error(err);
     }
   };
+
   const inithtml5QrcodeScanner = () => {
     // Crear una referencia al sonido de beep
     beepSoundRef.current = new Audio(sound);
 
     // Verificar si el archivo de audio se puede cargar
-    beepSoundRef.current.oncanplaythrough = () => {
-    };
+    beepSoundRef.current.oncanplaythrough = () => {};
 
     beepSoundRef.current.onerror = (error) => {
       console.error('Error al cargar el archivo de audio:', error);
@@ -350,12 +358,12 @@ async function getCode(code: string) {
 
       qrCodeMessage = qrCodeMessage.trimEnd().trimStart();
 
+      setActualCode(qrCodeMessage);
+
       setScannedCodes((prevCodes) => [
         ...prevCodes,
         { codigo: qrCodeMessage, cantidad: 1 }
       ]);
-
-      //alert(qrCodeMessage);
 
       setLastScan(now);
       beepSoundRef.current.play();
@@ -547,9 +555,7 @@ async function getCode(code: string) {
     setCodigosNombres([]);
   };
 
-  useEffect(() => {
-  }, [CodigosNombres]);
-
+  useEffect(() => {}, [CodigosNombres]);
 
   return (
     <>
@@ -798,6 +804,12 @@ async function getCode(code: string) {
                           //evento enter
                           onKeyPress={(e) => {
                             if (e.key === 'Enter') {
+                              if (TypedCode === '') {
+                                return;
+                              }
+
+                              setActualCode(TypedCode.trim());
+
                               setScannedCodes((prevCodes) => [
                                 ...prevCodes,
                                 { codigo: TypedCode.trim(), cantidad: 1 }
@@ -861,18 +873,7 @@ async function getCode(code: string) {
                               }}
                               align="right"
                             >
-                              Cantid
-                            </TableCell>
-                            <TableCell
-                              sx={{
-                                position: 'sticky',
-                                top: 0,
-                                backgroundColor: 'background.paper',
-                                zIndex: 1
-                              }}
-                              align="right"
-                            >
-                              Exist.
+                              Cantidad
                             </TableCell>
                             <TableCell
                               sx={{
@@ -883,86 +884,163 @@ async function getCode(code: string) {
                               }}
                               align="right"
                             ></TableCell>
+                            {/* <TableCell
+                              sx={{
+                                position: 'sticky',
+                                top: 0,
+                                backgroundColor: 'background.paper',
+                                zIndex: 1
+                              }}
+                              align="right"
+                            >
+                              Ult. Mov.
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                position: 'sticky',
+                                top: 0,
+                                backgroundColor: 'background.paper',
+                                zIndex: 1
+                              }}
+                              align="right"
+                            ></TableCell> */}
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {accumulatedData.reverse().map((row) => (
-                            <TableRow
-                              key={row.codigo}
-                              sx={{
-                                fontSize: '0.2rem',
-                                '&:last-child td, &:last-child th': {
-                                  border: 0
-                                }
-                              }}
-                            >
-                              <TableCell
-                                component="th"
-                                scope="row"
-                                sx={{ fontSize: '0.6rem' }}
+                          {accumulatedData.reverse().map((row, index) => (
+                            <>
+                              <TableRow
+                                key={row.codigo}
+                                sx={{
+                                  fontSize: '0.2rem',
+                                  '&:last-child td, &:last-child th': {
+                                    border: 0
+                                  },
+                                  backgroundColor:
+                                    ActualCode === row.codigo
+                                      ? '#b9b9b9'
+                                      : 'white'
+                                }}
+                                onClick={() => handleRowClick(index)}
                               >
-                                {row.codigo}
-                              </TableCell>
-                              <TableCell
-                                align="left"
-                                sx={{ fontSize: '0.6rem' }}
-                              >
-                                {CodigosNombres.find(
-                                  (x) => x.codigo === row.codigo
-                                )?.desc_art || 'No se encontró el artículo'}
-                              </TableCell>
-                              <TableCell
-                                align="left"
-                                sx={{ fontSize: '0.6rem' }}
-                              >
-                                <TextField
-                                  error={CantidadEditando < 0}
-                                  fullWidth
-                                  margin="normal"
-                                  helperText={
-                                    CantidadEditando < 0
-                                      ? 'La cantidad debe ser mayor a 0'
-                                      : ''
-                                  }
-                                  label={''}
-                                  name="cantidad"
-                                  onChange={(e) => handleChangeCantidad(e, row)}
-                                  type="number"
-                                  value={row.cantidad}
-                                  variant="outlined"
-                                  size="medium"
-                                  inputProps={{
-                                    style: { textAlign: 'right' }
-                                  }}
-                                />
-                              </TableCell>
-                              <TableCell
-                                align="right"
-                                sx={{ fontSize: '0.6rem' }}
-                              >
-                                {
-                                  CodigosNombres.find(
+                                <TableCell
+                                  component="th"
+                                  scope="row"
+                                  sx={{ fontSize: '0.6rem' }}
+                                >
+                                  {row.codigo}
+                                </TableCell>
+                                <TableCell
+                                  align="left"
+                                  sx={{ fontSize: '0.6rem' }}
+                                >
+                                  {CodigosNombres.find(
                                     (x) => x.codigo === row.codigo
-                                  )?.existencia
-                                }
-                              </TableCell>
-                              <TableCell
-                                align="right"
-                                sx={{ fontSize: '0.6rem' }}
-                              >
-                                <DeleteIcon
-                                  color="error"
-                                  onClick={() => handleDelete(row.codigo)}
-                                />
+                                  )?.desc_art || 'No se encontró el artículo'}
+                                </TableCell>
+                                <TableCell
+                                  align="left"
+                                  sx={{ fontSize: '0.6rem' }}
+                                >
+                                  <TextField
+                                    error={CantidadEditando < 0}
+                                    fullWidth
+                                    helperText={
+                                      CantidadEditando < 0
+                                        ? 'La cantidad debe ser mayor a 0'
+                                        : ''
+                                    }
+                                    label={''}
+                                    name="cantidad"
+                                    onChange={(e) =>
+                                      handleChangeCantidad(e, row)
+                                    }
+                                    type="number"
+                                    value={row.cantidad}
+                                    size="small"
+                                    margin="none"
+                                    inputProps={{
+                                      style: {
+                                        textAlign: 'right',
+                                        fontSize: '0.6rem',
+                                        border: 'none'
+                                      } // Ajusta padding del input
+                                    }}
+                                    sx={{ height: '100%' }}
+                                  />
+                                </TableCell>
+                                <IconButton>
+                                  {openRows[index] ? (
+                                    <ExpandLess />
+                                  ) : (
+                                    <ExpandMoreIcon />
+                                  )}
+                                </IconButton>
+                                <TableCell
+                                  align="left"
+                                  sx={{ fontSize: '0.6rem' }}
+                                >
+                                  <DeleteIcon
+                                    color="error"
+                                    onClick={() => handleDelete(row.codigo)}
+                                  />
+                                </TableCell>
+                              </TableRow>
 
-                                {/* <Button
-                                  variant="contained"
-                                  color="error"
-                                  startIcon={<RemoveIcon />}
-                                  onClick={() => handleDelete(row.codigo)}
-                                /> */}
-                              </TableCell>
-                            </TableRow>
+                              <TableRow>
+                                <TableCell
+                                  style={{ paddingBottom: 0, paddingTop: 0 }}
+                                  colSpan={4}
+                                >
+                                  <Collapse
+                                    in={openRows[index]}
+                                    timeout="auto"
+                                    unmountOnExit
+                                  >
+                                    <Table>
+                                      <TableBody>
+                                        <TableRow>
+                                          <TableCell
+                                            align="left"
+                                            sx={{ fontSize: '0.6rem' }}
+                                          >
+                                            EXISTENCIA
+                                          </TableCell>
+                                          <TableCell
+                                            align="left"
+                                            sx={{ fontSize: '0.6rem' }}
+                                          >
+                                            {
+                                              CodigosNombres.find(
+                                                (x) => x.codigo === row.codigo
+                                              )?.existencia
+                                            }
+                                          </TableCell>
+                                        </TableRow>
+                                        <TableRow>
+                                          <TableCell
+                                            align="left"
+                                            sx={{ fontSize: '0.6rem' }}
+                                          >
+                                            ULTIMO INVENTARIO
+                                          </TableCell>
+                                          <TableCell
+                                            align="left"
+                                            sx={{ fontSize: '0.6rem' }}
+                                          >
+                                            {
+                                              CodigosNombres.find(
+                                                (x) => x.codigo === row.codigo
+                                              )?.fecha_ultimo_inventario
+                                            }
+                                          </TableCell>
+                                        </TableRow>
+                                      </TableBody>
+                                    </Table>
+                                  </Collapse>
+                                </TableCell>
+                              </TableRow>
+                            </>
                           ))}
                         </TableBody>
                       </Table>
