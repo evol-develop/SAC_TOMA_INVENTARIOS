@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { forwardRef, useEffect, useRef, useState } from 'react';
 import * as ScanditSDK from 'scandit-sdk';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -10,13 +10,18 @@ import {
   Button,
   Collapse,
   Dialog,
+  DialogActions,
   DialogContent,
+  DialogContentText,
+  DialogTitle,
+  Divider,
   FormControl,
   Grid,
   IconButton,
   InputLabel,
   LinearProgress,
   OutlinedInput,
+  Slide,
   Table,
   TextField,
   Toolbar,
@@ -64,6 +69,9 @@ import CheckIcon from '@mui/icons-material/Check';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { ExpandLess } from '@mui/icons-material';
+import ConfirmDialog from '../ConfirmDialog';
+import { APP } from 'src/config';
+import { TransitionProps } from '@mui/material/transitions';
 
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
@@ -85,6 +93,15 @@ const scanAreaBorderStyle = {
   left: `${restrictedArea.left * screenWidth}px`,
   pointerEvents: 'none' // Para asegurarte de que el borde no interfiera con los eventos de clic
 };
+
+const Transition = forwardRef(function Transition(
+  props: TransitionProps & {
+    children: React.ReactElement<any, any>;
+  },
+  ref: React.Ref<unknown>
+) {
+  return <Slide direction="down" ref={ref} {...props} />;
+});
 
 function Scandit() {
   const [TypedCode, setTypedCode] = useState('');
@@ -151,6 +168,13 @@ function Scandit() {
     { codigo: '1030', desc_art: 'No encontrado', cantidad: 1 }
   ]);
   const [openRows, setOpenRows] = useState({});
+
+  /**
+   * Estado que almacena la cantidad de claves diferentes escaneadas.
+   * No cuenta la cantidad total de artículos.
+   */
+  const [TotalArticulosEscaneados, setTotalArticulosEscaneados] =
+    useState<number>(0);
 
   const handleRowClick = (index) => {
     setOpenRows((prev) => ({ ...prev, [index]: !prev[index] }));
@@ -305,13 +329,14 @@ function Scandit() {
     //initScanditSdk();
   };
 
-  const [isOpen, setOpen] = useState(true);
+  const [isOpenn, setOpenn] = useState(true);
 
   const handleClose = () => {
-    setOpen(false);
+    setOpenn(false);
   };
 
   const handleLogout = async () => {
+    debugger;
     try {
       handleClose();
       await logout();
@@ -320,6 +345,8 @@ function Scandit() {
       console.error(err);
     }
   };
+
+  const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
   const inithtml5QrcodeScanner = () => {
     // Crear una referencia al sonido de beep
@@ -471,6 +498,7 @@ function Scandit() {
     setCantidadEditando(e.target.value);
 
     let registros = [...scannedCodes];
+    debugger;
 
     registros.map((x) => {
       if (x.codigo === row.codigo) {
@@ -512,31 +540,60 @@ function Scandit() {
     }
   }, [SinRegistros]);
 
-  const GuardaInventario = async () => {
-    dispatch(setIsLoading(true));
+  const [ConfirmandoInventario, setConfirmandoInventario] = useState(false);
+  const [Ubicacion, setUbicacion] = useState('');
 
-    if (scannedCodes.length === 0) {
-      ToastError('No hay códigos escaneados');
-      dispatch(setIsLoading(false));
-      setSinRegistros(true);
-
+  const GuardaInventario = async (guardaUbicacion: boolean) => {
+    if (ConfirmandoInventario) {
+      debugger;
       return;
     }
 
-    const response = await axios.post<ResponseInterface>(
-      `/api/colores/guardarInventario/${dataSucursal.clave_sucursal}`,
-      scannedCodes
-    );
+    setConfirmandoInventario(true);
 
-    if (response.data.isSuccess) {
-      setScannedCodes([]);
-      setScanCounts([]);
-      setCodigosNombres([]);
+    try {
+      dispatch(setIsLoading(true));
+
+      if (scannedCodes.length === 0) {
+        ToastError('No hay códigos escaneados');
+        dispatch(setIsLoading(false));
+        setSinRegistros(true);
+        setConfirmandoInventario(false);
+        return;
+      }
+
+      const response = await axios.post<ResponseInterface>(
+        `/api/colores/guardarInventario/${
+          dataSucursal != undefined ? dataSucursal.clave_sucursal : 0
+        }`,
+        {
+          model: scannedCodes,
+          Ubicacion,
+          guardaUbicacion
+        }
+      );
+
+      if (response.data.isSuccess) {
+        setScannedCodes([]);
+        setScanCounts([]);
+        setCodigosNombres([]);
+        setTodoBien(true);
+        ToastCompletado('Datos guardados con exito');
+      } else {
+        setTodoBien(false);
+        ToastError(response.data.message);
+      }
+
       dispatch(setIsLoading(false));
-      setTodoBien(true);
-    } else {
+      setConfirmandoInventario(false);
+      setShowUbicacionInput(false);
+      setUbicacion('');
+    } catch (error) {
       dispatch(setIsLoading(false));
       setTodoBien(false);
+      ToastError('ERROR!: ', error);
+      setConfirmandoInventario(false);
+      setShowUbicacionInput(false);
     }
   };
 
@@ -557,13 +614,18 @@ function Scandit() {
 
   useEffect(() => {}, [CodigosNombres]);
 
+  const [ShowDialogGuardaUbicacion, setShowDialogGuardaUbicacion] =
+    useState(false);
+
+  const [ShowUbicacionInput, setShowUbicacionInput] = useState(false);
+
   return (
     <>
       <Dialog
         sx={{ overflow: 'hidden' }}
         ref={dialogRef}
         fullScreen
-        open={isOpen}
+        open={isOpenn}
         onClose={() => {}}
       >
         <Container sx={{ overflow: 'hidden' }}>
@@ -697,12 +759,26 @@ function Scandit() {
                       alignItems: 'center' // Centra verticalmente
                     }}
                     aria-disabled={scannedCodes.length === 0 || show}
-                    onClick={handleLogout}
+                    onClick={() => {
+                      setOpenConfirmDialog(true);
+                    }}
                   >
                     <LogoutIcon />
                   </div>
                 </Grid>
               </Grid>
+
+              {openConfirmDialog && (
+                <ConfirmDialog
+                  open={openConfirmDialog}
+                  setOpen={setOpenConfirmDialog}
+                  handleAcept={handleLogout}
+                  encabezadoText="Confirmación"
+                  bodyText="¿Salir de la aplicación?"
+                  acceptButtonText="Sí"
+                  cancelButtonText="No"
+                />
+              )}
 
               {show && scanCounts ? (
                 scanCounts.map((code, index) => (
@@ -761,6 +837,13 @@ function Scandit() {
                     </div>
                   ) : (
                     <Box sx={{ width: '100%' }}>
+                      <Box
+                        sx={{ width: '100%' }}
+                        display={'flex'}
+                        justifyContent={'flex-end'}
+                      >
+                        <h4>Total registros: {scannedCodes.length}</h4>
+                      </Box>
                       <FormControl fullWidth variant="outlined">
                         <InputLabel htmlFor="outlined-adornment-password">
                           Código
@@ -776,10 +859,24 @@ function Scandit() {
                                   return;
                                 }
 
-                                setScannedCodes((prevCodes) => [
-                                  ...prevCodes,
-                                  { codigo: TypedCode.trim(), cantidad: 1 }
-                                ]);
+                                const registros = [...scannedCodes];
+                                const existe = registros.find(
+                                  (x) => x.codigo.trim() == TypedCode.trim()
+                                );
+
+                                if (existe) {
+                                  registros.map((x) => {
+                                    if (x.codigo.trim() === TypedCode.trim()) {
+                                      x.cantidad = x.cantidad + 1;
+                                    }
+                                  });
+                                  setScannedCodes([...registros]);
+                                } else {
+                                  setScannedCodes((prevCodes) => [
+                                    ...prevCodes,
+                                    { codigo: TypedCode.trim(), cantidad: 1 }
+                                  ]);
+                                }
 
                                 setTypedCode('');
 
@@ -810,11 +907,24 @@ function Scandit() {
 
                               setActualCode(TypedCode.trim());
 
-                              setScannedCodes((prevCodes) => [
-                                ...prevCodes,
-                                { codigo: TypedCode.trim(), cantidad: 1 }
-                              ]);
+                              const registros = [...scannedCodes];
+                              const existe = registros.find(
+                                (x) => x.codigo.trim() == TypedCode.trim()
+                              );
 
+                              if (existe) {
+                                registros.map((x) => {
+                                  if (x.codigo.trim() === TypedCode.trim()) {
+                                    x.cantidad = x.cantidad + 1;
+                                  }
+                                });
+                                setScannedCodes([...registros]);
+                              } else {
+                                setScannedCodes((prevCodes) => [
+                                  ...prevCodes,
+                                  { codigo: TypedCode.trim(), cantidad: 1 }
+                                ]);
+                              }
                               setTypedCode('');
 
                               //poner el foco de nuevo en el input
@@ -1051,6 +1161,13 @@ function Scandit() {
             </>
           )}
         </Container>
+        <Box sx={{ width: '100%' }} display={'flex'} justifyContent={'center'}>
+          {' '}
+          <p style={{ fontSize: '8px', color: 'gray' }}>
+            <span>{`FC. ${APP.FECHA_COMPILACION} `}</span>
+            <span>{`v.${APP.VERSION}`}</span>
+          </p>
+        </Box>
       </Dialog>
 
       <Dialog
@@ -1116,11 +1233,17 @@ function Scandit() {
                       display: 'flex',
                       justifyContent: 'center', // Centra horizontalmente
                       alignItems: 'center', // Centra verticalmente
-                      color: 'green',
+                      color: ConfirmandoInventario ? 'gray' : 'green',
                       userSelect: 'none'
                     }}
                     aria-disabled={scannedCodes.length === 0 || show}
-                    onClick={() => GuardaInventario()}
+                    onClick={() => {
+                      if (ConfirmandoInventario) {
+                        return;
+                      }
+
+                      setShowUbicacionInput(true);
+                    }}
                   >
                     <CheckIcon />
                     Confirmar inventario
@@ -1130,16 +1253,76 @@ function Scandit() {
             </CardContent>
           </Card>
 
+          {ShowUbicacionInput && (
+            <>
+              <Dialog
+                open={ShowUbicacionInput}
+                TransitionComponent={Transition}
+                keepMounted
+                onClose={handleClose}
+                aria-describedby="alert-dialog-slide-description"
+              >
+                <DialogTitle>
+                  ¿Actualizar ubicación de los articulos?
+                </DialogTitle>
+                <DialogContent
+                  sx={{
+                    height: '10lvh',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <TextField
+                    size="small"
+                    value={Ubicacion}
+                    onChange={(e) => setUbicacion(e.target.value)}
+                    label={'Ubicación'}
+                    focused
+                  />
+                </DialogContent>
+                <Divider />
+                <DialogActions
+                  sx={{ display: 'flex', justifyContent: 'space-around' }}
+                >
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      setShowUbicacionInput(false);
+                      GuardaInventario(false);
+                    }}
+                  >
+                    No Actualizar
+                  </Button>
+                  <Button
+                    variant="contained"
+                    onClick={() => {
+                      setShowUbicacionInput(false);
+                      GuardaInventario(true);
+                    }}
+                  >
+                    Actualizar
+                  </Button>
+                </DialogActions>
+              </Dialog>
+            </>
+          )}
+
+          <Box
+            sx={{ width: '100%' }}
+            display={'flex'}
+            justifyContent={'flex-end'}
+          >
+            <h4>Total registros: {scannedCodes.length}</h4>
+          </Box>
           {isLoading && (
             <>
               <LinearProgress />
             </>
           )}
-
           {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
           {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
           {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
-
           <Collapse in={TodoBien}>
             <Alert
               action={
@@ -1159,7 +1342,6 @@ function Scandit() {
               Datos guardados correctamente
             </Alert>
           </Collapse>
-
           <Collapse in={SinRegistros}>
             <Alert
               severity="warning"
@@ -1180,7 +1362,6 @@ function Scandit() {
               No hay registros para subir
             </Alert>
           </Collapse>
-
           {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
           {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
           {/* ALERTAS * * * * * * * * * * * * * * * * * * * * * * * * */}
@@ -1347,6 +1528,35 @@ function Scandit() {
                             key={row.codigo}
                             sx={{
                               fontSize: '0.2rem',
+                              '& td, & th': {
+                                // ⬅️ Aplica el color del texto a todas las celdas
+                                color:
+                                  row.cantidad <
+                                  CodigosNombres.find(
+                                    (x) => x.codigo.trim() === row.codigo.trim()
+                                  )?.existencia
+                                    ? '#fff' // Blanco si la cantidad es menor
+                                    : row.cantidad >
+                                      CodigosNombres.find(
+                                        (x) =>
+                                          x.codigo.trim() === row.codigo.trim()
+                                      )?.existencia
+                                    ? '#0a3d0a' // Verde oscuro si la cantidad es mayor
+                                    : 'inherit'
+                              },
+                              backgroundColor:
+                                row.cantidad <
+                                CodigosNombres.find(
+                                  (x) => x.codigo.trim() === row.codigo.trim()
+                                )?.existencia
+                                  ? '#ff6b6b'
+                                  : row.cantidad >
+                                    CodigosNombres.find(
+                                      (x) =>
+                                        x.codigo.trim() === row.codigo.trim()
+                                    )?.existencia
+                                  ? '#aefcba'
+                                  : 'transparent',
                               '&:last-child td, &:last-child th': {
                                 border: 0
                               }
@@ -1355,7 +1565,9 @@ function Scandit() {
                             <TableCell
                               component="th"
                               scope="row"
-                              sx={{ fontSize: '0.6rem' }}
+                              sx={{
+                                fontSize: '0.6rem'
+                              }}
                             >
                               {row.codigo}
                             </TableCell>

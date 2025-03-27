@@ -71,16 +71,21 @@ const Login = () => {
           response.data.result as ProductosEmpresa[]
         );
 
+        setCredencialesUusario(credenciales)
+        const cred = credenciales;
+
+        cred.id_empresa = response.data.result[0].id_empresa
+
         if (productos.length > 1) {
           setProductoSeleccionado(productos[0]);
-
-          setCredencialesUusario(credenciales);
           setProductos(productos);
           setEsValido(true);
         } else {
           if (productos.length == 1) {
+            setEsValido(true);
+            cred.id_sucursal = 1
             setProductoSeleccionado(productos[0]);
-            cambiarCadenaConexion(productos[0].id_producto);
+            cambiarCadenaConexion(productos[0].id_producto, cred);
           } else {
             alert('No se encontraron productos');
           }
@@ -154,6 +159,8 @@ const Login = () => {
       id_sucursal: id_sucursal,
       id_rol: id_rol
     };
+
+    debugger
 
     var response = await token(credencial);
 
@@ -229,15 +236,15 @@ const Login = () => {
     setEsValido(false);
   };
 
-  async function cambiarCadenaConexion(id_rol: number) {
+  async function cambiarCadenaConexion(id_rol: number, cred: any = null) {
     setCargando(true);
-
+    
     const credencial = {
-      email: credencialesUsuario.email,
-      password: credencialesUsuario.password,
-      id_empresa: credencialesUsuario.id_empresa,
-      id_sucursal: credencialesUsuario.id_sucursal,
-      id_rol: id_rol
+      email: cred != null ? cred.email : credencialesUsuario.email,
+      password: cred != null ? cred.password : credencialesUsuario.password,
+      id_empresa: cred != null ? cred.id_empresa : credencialesUsuario.id_empresa,
+      id_sucursal: cred != null ? cred.id_sucursal : credencialesUsuario.id_sucursal,
+      id_rol: cred != null ? cred.id_rol : id_rol
     };
 
     var response = await cambiarCadena(credencial);
@@ -272,7 +279,7 @@ const Login = () => {
       </div>
 
       <Dialog
-        open={Productos.length > 1 && esValido}
+        open={(Productos.length > 1 || Sucursales.length > 0) && esValido}
         onClose={handleClose}
         fullWidth
         maxWidth={'xs'}
