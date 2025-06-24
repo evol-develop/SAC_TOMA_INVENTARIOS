@@ -5,14 +5,12 @@ import EditIcon from '@mui/icons-material/Edit';
 import { Camera } from '@mui/icons-material';
 import {
   Alert,
-  AppBar,
   Box,
   Button,
   Collapse,
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   Divider,
   FormControl,
@@ -62,7 +60,7 @@ import { RootState } from 'src/store/store';
 import { sucursalInterface } from 'src/interfaces/sucursalInterface';
 import { Loading } from '../Loading';
 import { usePage } from 'src/hooks/usePage';
-import { setIsLoading } from 'src/store/slices/page';
+import { createSlot, setIsLoading } from 'src/store/slices/page';
 import { ToastCompletado, ToastError } from '../SweetAlert2/alerts';
 import { set } from 'nprogress';
 import CheckIcon from '@mui/icons-material/Check';
@@ -73,6 +71,7 @@ import ConfirmDialog from '../ConfirmDialog';
 import { APP } from 'src/config';
 import { TransitionProps } from '@mui/material/transitions';
 import { AnyIfEmpty } from 'react-redux';
+import { SnackbarProvider, useSnackbar } from 'notistack';
 
 const screenWidth = window.innerWidth;
 const screenHeight = window.innerHeight;
@@ -104,33 +103,24 @@ const Transition = forwardRef(function Transition(
   return <Slide direction="down" ref={ref} {...props} />;
 });
 
-function Scandit() {
-  const [TypedCode, setTypedCode] = useState('');
-  const { authState, authLocalState, logout } = useAuth();
+function PantallaPrincipal() {
+  const { logout } = useAuth();
   const navigate = useNavigate();
   const { dispatch } = usePage();
-  const [isInitialized, setIsInitialized] = useState(false);
+
+  const { enqueueSnackbar, closeSnackbar } = useSnackbar();
 
   const readerRef = useRef(null);
   const dialogRef = useRef(null);
-  const [show, setShow] = useState(true);
-  const [scannedCodes, setScannedCodes] = useState([]);
-  const [scanCounts, setScanCounts] = useState<
-    { codigo: string; cantidad: number }[]
-  >([]);
+  const [showUltimoLeidoEnHeader, setShowUltimoLeidoEnHeader] = useState(true);
+
+  const ListadoActual = useAppSelector(
+    (state: RootState) => state.page.slots.ListadoActual
+  );
+
   const [CodigosNombres, setCodigosNombres] = useState([]);
 
-  const [LastScan, setLastScan] = useState(null);
-
-  const beepSoundRef = useRef(null);
-
-  const [ButtonSeleccted, setButtonSeleccted] = useState('Scanner' || 'Camera');
-
-  const [ActualCode, setActualCode] = useState('');
-  const [LastCodeReadComplente, setLastCodeReadComplente] = useState<any>({
-    codigo: '',
-    cantidad: 0
-  });
+  const [ButtonSeleccted, setButtonSeleccted] = useState('Scanner');
 
   const dataSucursal = useAppSelector(
     (state: RootState) => state.empresa.sucursal
@@ -138,118 +128,14 @@ function Scandit() {
 
   const [AbrirSegundoModal, setAbrirSegundoModal] = useState(false);
 
-  //lista de 30 elementos con propiedades codigo, cantidad y desc_art
-  const [CodigosNombresPrubas, setCodigosNombresPruebas] = useState([
-    { codigo: '1000', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1001', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1002', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1003', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1004', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1005', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1006', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1007', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1008', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1009', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1010', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1011', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1012', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1013', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1014', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1015', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1016', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1017', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1018', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1019', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1020', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1021', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1022', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1023', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1024', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1025', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1026', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1027', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1028', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1029', desc_art: 'No encontrado', cantidad: 1 },
-    { codigo: '1030', desc_art: 'No encontrado', cantidad: 1 }
-  ]);
-  const [openRows, setOpenRows] = useState({});
-
-  /**
-   * Estado que almacena la cantidad de claves diferentes escaneadas.
-   * No cuenta la cantidad total de artículos.
-   */
-  const [TotalArticulosEscaneados, setTotalArticulosEscaneados] =
-    useState<number>(0);
+  const [ExpandeInfoRenglon, setExpandeInfoRenlgon] = useState({});
 
   const handleRowClick = (index) => {
-    setOpenRows((prev) => ({ ...prev, [index]: !prev[index] }));
-  };
-  const initScanditSdk = async () => {
-    try {
-      await ScanditSDK.configure(
-        'AdSU9BnqPSd+EY4D4gBw7bMAwyuYLIgrYlTE74Zn8Qq8bG4p4Eth5tBapGRIA9vIu3GtAeR3ucrGThquPXyZtshdbHstGG+R3yFvlZwyTD8LKcq4EUOlEYBzJPH9e3fXJ3aC9DkBMay+d43opinU0WJGfS45Fm0rkynfdaJnDjNuZMaNcknExU5zM2Mmf96MEzpHQt5aTfGDZu4bXVkM7t8ifqNkF7xMtAnMTotsx8pkVaSG4Ek8QNt18ABmYq/3f1VcuBxeKvsrcIaq9104Bow7WATiefZ2Lj4eGOBjD+3gLOMHCmRsbKh1cxjKX1kLJEAZyz9b0TiOFIFl/UW+Gz4mGxOWcgTIXlQvl51StQrEbnJEIT32ctFQna6lXc7oLhD5nWFgbjN8BBXun2ZBACRW/1C3XOe8eD7yzZtFd4MPZaZ/ngnRetgknVarRwoG9Xt01x9fUzqVbWNRJHYByZhYBbnJGY9MvTaAal4jhkNwcnSjYzROS0V0nvM3V2cLm2t3JEMPD5uGdOHT40ZqHnRbkrtJFS0ttLupP6u4MD1fO4yLrXipapUE/i9PCap9VD2wyI8hYgHYNoo43DnKwVWju+wusWbCaCSs4mT06yLVYVMM4ThstjDo7YBm/qV96Bx143TrgEiMOwVsD7WNTsQxnlJPpb0u4xtDhRJOMoYhVnahaxYqVk5L2tIFk8Gr9uv8saugDoYQZGJvrXnfTlHPSOthMANDBi5kWI3ay6G9+FVpGkUYDUW4dS4/4HaSxdCdXNUe4Q/38dWq4a1aBl4+021Ehx4QHF2BY7Cb8A67IpzX/qt+DKHi51f62r1vq4Qq867xcUyLZl0R7QD42NmvlvMj2PxG8pQOi+HDUEN4SfCQ9FfTMvrVhjlaz6OS3fZMIBR8p8I8Xh0HhAotjySM5i4Af3x+2go8uSJSxaKgR/6/6yEdbgTR1EPzs/JOIztk+9aRsLFD6N02u49DyPh1oO1Wt/Z3GFnOhzh1tDbITChLdnYqZwzMJeVru//jHwKLJqKy2VBAPPecRwpNwloNnjmaBOq7CNwJItPxfVB7uWft4T0NRPlXVEtPuDSTP60SN+XDUYEbNNoWKS8lgyf4lV0mWBb0XmQ65cHy1GZO68nIMPou/O6wc4JgSX3/CYMUHr17jUaCDufwKi1+axuxcSYnylx0u36KRJPYu21gPfAxtU0wGs4Jl3TtZzt0ejROE+Bg',
-        {
-          engineLocation: 'https://cdn.jsdelivr.net/npm/scandit-sdk@5.x/build/'
-        }
-      );
-      const scanner = await ScanditSDK.BarcodePicker.create(
-        document.getElementById('your-element-id'),
-        {
-          playSoundOnScan: true,
-          vibrateOnScan: true,
-          hideLogo: true
-        }
-      );
-
-      scanner.setLaserArea({
-        x: restrictedArea.left,
-        y: restrictedArea.top,
-        width: restrictedArea.right - restrictedArea.left,
-        height: restrictedArea.bottom - restrictedArea.top
-      });
-
-      scanner.applyScanSettings(
-        new ScanditSDK.ScanSettings({
-          enabledSymbologies: [
-            ScanditSDK.Barcode.Symbology.EAN8,
-            ScanditSDK.Barcode.Symbology.EAN13,
-            ScanditSDK.Barcode.Symbology.UPCA,
-            ScanditSDK.Barcode.Symbology.UPCE,
-            ScanditSDK.Barcode.Symbology.CODE128,
-            ScanditSDK.Barcode.Symbology.CODE39,
-            ScanditSDK.Barcode.Symbology.CODE93,
-            ScanditSDK.Barcode.Symbology.INTERLEAVED_2_OF_5,
-            ScanditSDK.Barcode.Symbology.QR,
-            ScanditSDK.Barcode.Symbology.GS1_DATABAR_EXPANDED,
-            ScanditSDK.Barcode.Symbology.CODABAR,
-            ScanditSDK.Barcode.Symbology.DATA_MATRIX,
-            ScanditSDK.Barcode.Symbology.PDF417
-          ],
-          codeDuplicateFilter: 2000,
-          maxNumberOfCodesPerFrame: 1,
-          searchArea: {
-            x: restrictedArea.left,
-            y: restrictedArea.top,
-            width: restrictedArea.right - restrictedArea.left,
-            height: restrictedArea.bottom - restrictedArea.top
-          }
-        })
-      );
-
-      scanner.on('scan', (event) => {
-        const scannedData = event.barcodes[0]?.data;
-        if (scannedData) {
-          setScannedCodes((prevCodes) => [
-            ...prevCodes,
-            { codigo: scannedData.trimEnd().trimStart(), cantidad: 1 }
-          ]);
-        }
-      });
-    } catch (error) {}
+    //setExpandeInfoRenlgon((prev) => ({ ...prev, [index]: !prev[index] }));
   };
 
   //Obtiene la descripcion del articulo y la existencia
-  const [codigosNombres, setcodigosNombres] = useState([]);
+  const [codigosNombres] = useState([]);
 
   async function getCode(code: string) {
     code = code.trimEnd().trimStart();
@@ -286,52 +172,15 @@ function Scandit() {
   const [isDialogMounted, setIsDialogMounted] = useState(false);
 
   useEffect(() => {
-    setShow(false);
+    setShowUltimoLeidoEnHeader(false);
     setButtonSeleccted('Scanner');
   }, []);
-
-  useEffect(() => {
-    setIsDialogMounted(true);
-  }, [dialogRef.current]);
-
-  useEffect(() => {
-    if (show) {
-      const intervalId = setInterval(() => {
-        if (isDialogMounted) {
-          inithtml5QrcodeScanner();
-          clearInterval(intervalId);
-        }
-      }, 1000);
-
-      return () => clearInterval(intervalId);
-    }
-  }, [show, isDialogMounted]);
-
-  useEffect(() => {
-    updateScanCounts();
-
-    // if (scannedCodes.length == 0 && show == false) {
-    //   showScanner();
-    // }
-  }, [scannedCodes]);
-
-  // useEffect(() => {
-  //   if (scannedCodes.length === 0 || show === true) {
-  //     setShow(true);
-  //   }
-  // }, [scannedCodes, show]);
 
   const modificarCodigos = () => {
     if (ButtonSeleccted === 'Camera') {
       setButtonSeleccted('Scanner');
-      setShow(false);
+      setShowUltimoLeidoEnHeader(false);
     }
-  };
-
-  const showScanner = () => {
-    setButtonSeleccted('Camera');
-    setShow(true);
-    //initScanditSdk();
   };
 
   const [isOpenn, setOpenn] = useState(true);
@@ -352,186 +201,10 @@ function Scandit() {
 
   const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
-  const inithtml5QrcodeScanner = () => {
-    // Crear una referencia al sonido de beep
-    beepSoundRef.current = new Audio(sound);
-
-    // Verificar si el archivo de audio se puede cargar
-    beepSoundRef.current.oncanplaythrough = () => {};
-
-    beepSoundRef.current.onerror = (error) => {
-      console.error('Error al cargar el archivo de audio:', error);
-    };
-
-    // Configurar los formatos soportados
-    const config = {
-      fps: 0.1,
-      qrbox: { width: 750, height: 240 },
-      Html5QrcodeSupportedFormats: [
-        Html5QrcodeSupportedFormats.QR_CODE,
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.CODE_39,
-        Html5QrcodeSupportedFormats.EAN_13
-        // Agrega otros formatos según sea necesario
-      ]
-    };
-
-    // Inicializar el escáner sin iniciar la cámara
-    readerRef.current = new Html5Qrcode('reader');
-
-    const onScanSuccess = (qrCodeMessage: string) => {
-      const now = new Date().getTime();
-
-      if (LastScan && now - LastScan < 3000) {
-        //alert('Espere 2 segundos antes de escanear otro código');
-        return;
-      }
-
-      qrCodeMessage = qrCodeMessage.trimEnd().trimStart();
-
-      setActualCode(qrCodeMessage);
-
-      setLastCodeReadComplente({ codigo: qrCodeMessage, cantidad: 1 });
-
-      setScannedCodes((prevCodes) => [
-        ...prevCodes,
-        { codigo: qrCodeMessage, cantidad: 1 }
-      ]);
-
-      setLastScan(now);
-      beepSoundRef.current.play();
-
-      //esperar 2 segundos
-      setTimeout(() => {}, 2000);
-    };
-
-    const onScanError = (errorMessage) => {
-      setTimeout(() => {}, 3000);
-    };
-
-    // Obtener la lista de cámaras disponibles
-    Html5Qrcode.getCameras()
-      .then((cameras) => {
-        // Buscar la cámara trasera
-        const rearCamera = cameras.find(
-          (camera) =>
-            camera.label.toLowerCase().includes('back') ||
-            camera.label.toLowerCase().includes('trasera')
-        );
-
-        // Si se encuentra una cámara trasera, usar su id
-        const cameraId = rearCamera ? rearCamera.id : cameras[0].id;
-
-        // Iniciar el escaneo con la cámara seleccionada
-        readerRef.current
-          .start(
-            cameraId,
-            {
-              fps: 1,
-              qrbox: { width: 200, height: 100 },
-              // videoConstraints: {
-              //   width: { ideal: 1280 },
-              //   height: { ideal: 720 }
-              // },
-              showTorchButtonIfIsSupported: true
-            },
-            onScanSuccess,
-            onScanError
-          )
-          .catch((err) => {
-            //alert('Error al iniciar el escaneo:' + err);
-          });
-      })
-      .catch((err) => {
-        //alert('Error al obtener las cámaras:' + err);
-      });
-  };
-
-  const updateScanCounts = () => {
-    debugger;
-    const counts = {};
-    scannedCodes.forEach((code) => {
-      let cantidad = Number(code.cantidad);
-      if (isNaN(cantidad)) cantidad = 0;
-
-      if (!isNaN(counts[code.codigo])) {
-        let can1 = Number(counts[code.codigo]);
-        counts[code.codigo] = can1 + cantidad;
-      } else {
-        counts[code.codigo] = cantidad;
-      }
-    });
-
-    if (scannedCodes.length > 0) {
-      const lastScannedCode = scannedCodes[scannedCodes.length - 1];
-      const lastCode = lastScannedCode.codigo.trim();
-      const lastCount = counts[lastCode] || 0;
-
-      setScanCounts([{ codigo: lastCode.trim(), cantidad: lastCount }]);
-
-      getCode(lastCode);
-    } else {
-      setScanCounts([]);
-    }
-  };
-
-  const accumulatedCounts = {};
-
-  scannedCodes.forEach((row) => {
-    const codigo = row.codigo;
-    const cantidad = Number(row.cantidad);
-
-    if (accumulatedCounts[codigo]) {
-      accumulatedCounts[codigo] =
-        Number(accumulatedCounts[codigo]) + Number(cantidad);
-    } else {
-      accumulatedCounts[codigo] = Number(cantidad);
-    }
-  });
-
-  const accumulatedData = Object.keys(accumulatedCounts).map((codigo) => ({
-    codigo: codigo.trim(),
-    cantidad: accumulatedCounts[codigo]
-  }));
-
   const handleDelete = (codigo) => {
-    const indexToDelete = scannedCodes.findIndex(
-      (code) => code.codigo === codigo.trim()
-    );
-    if (indexToDelete !== -1) {
-      const updatedScannedCodes = [...scannedCodes];
-      updatedScannedCodes.splice(indexToDelete, 1);
-      setScannedCodes(updatedScannedCodes);
-
-      if (LastCodeReadComplente.codigo.trim() === codigo.trim()) {
-        setLastCodeReadComplente({ codigo: '', cantidad: '' });
-      }
-    }
+    const registrosActuales = ListadoActual.filter((x) => x.codigo !== codigo);
+    dispatch(createSlot({ ['ListadoActual']: registrosActuales }));
   };
-
-  const [CantidadEditando, setCantidadEditando] = useState(0);
-  const handleChangeCantidad = (e, row) => {
-    setCantidadEditando(e.target.value);
-
-    let registros = [...scannedCodes];
-
-    registros.map((x) => {
-      if (x.codigo === row.codigo) {
-        x.cantidad = e.target.value;
-      }
-    });
-
-    setScannedCodes([...registros]);
-  };
-
-  // const PausarDespausarScanner = () => {
-  //   document.getElementById('reader')?.addEventListener('click', function () {
-  //     readerRef.current?.pause();
-  //     setTimeout(() => {
-  //       readerRef.current?.resume();
-  //     }, 500);
-  //   });
-  // };
 
   const isLoading = useAppSelector((state: RootState) => state.page.isLoading);
 
@@ -568,7 +241,7 @@ function Scandit() {
     try {
       dispatch(setIsLoading(true));
 
-      if (scannedCodes.length === 0) {
+      if (ListadoActual.length === 0) {
         ToastError('No hay códigos escaneados');
         dispatch(setIsLoading(false));
         setSinRegistros(true);
@@ -576,67 +249,224 @@ function Scandit() {
         return;
       }
 
-      const response = await axios.post<ResponseInterface>(
-        `/api/colores/guardarInventario/${
-          dataSucursal != undefined ? dataSucursal.clave_sucursal : 0
-        }`,
-        {
-          model: scannedCodes,
-          Ubicacion,
-          guardaUbicacion
-        }
-      );
+      debugger;
 
-      if (response.data.isSuccess) {
-        setScannedCodes([]);
-        setScanCounts([]);
-        setCodigosNombres([]);
-        setTodoBien(true);
-        setLastCodeReadComplente({
-          codigo: '',
-          cantidad: ''
+      await axios
+        .post<ResponseInterface>(
+          `/api/colores/guardarInventario/${
+            dataSucursal != undefined ? dataSucursal.clave_sucursal : 0
+          }`,
+          {
+            model: ListadoActual,
+            Ubicacion,
+            guardaUbicacion
+          },
+          { timeout: 60000 } // ⏰ 60 segundos de espera máxima
+        )
+        .then(() => {
+          debugger;
+          setCodigosNombres([]);
+          setTodoBien(true);
+          dispatch(createSlot({ ['ListadoActual']: [] }));
+          enqueueSnackbar('Datos guardados con exito', {
+            variant: 'success',
+            anchorOrigin: {
+              vertical: 'top',
+              horizontal: 'right'
+            }
+          });
+        })
+        .catch((error: any) => {
+          debugger;
+          let message = 'Error al guardar datos';
+
+          if (error?.isAxiosError) {
+            if (error.code === 'ECONNABORTED') {
+              message = 'La solicitud tardó demasiado. Verifica tu conexión.';
+            } else if (!navigator.onLine) {
+              message = 'Estás desconectado de internet.';
+            } else if (error.message.includes('Network Error')) {
+              message = 'Error de red. Revisa tu conexión.';
+            } else if (error.response) {
+              message = `Error ${error.response.status}: ${
+                error.response.data?.message ?? 'Error del servidor'
+              }`;
+            } else {
+              message = error.message;
+            }
+          } else {
+            message =
+              (error as Error)?.message ?? 'Error en la conexión.';
+          }
+
+          enqueueSnackbar(`ERROR: ${message}`, {
+            variant: 'error',
+            anchorOrigin: {
+              vertical: 'top',
+              horizontal: 'right'
+            }
+          });
+
+          setTodoBien(false);
+        })
+        .finally(() => {
+          debugger;
+          dispatch(setIsLoading(false));
+          setConfirmandoInventario(false);
+          setShowUbicacionInput(false);
+          setUbicacion('');
         });
-        ToastCompletado('Datos guardados con exito');
-      } else {
-        setTodoBien(false);
-        ToastError(response.data.message);
-      }
-
-      dispatch(setIsLoading(false));
-      setConfirmandoInventario(false);
-      setShowUbicacionInput(false);
-      setUbicacion('');
     } catch (error) {
+      debugger;
+      enqueueSnackbar('ERROR!: ' + error, {
+        variant: 'error',
+        anchorOrigin: {
+          vertical: 'top',
+          horizontal: 'right'
+        }
+      });
       dispatch(setIsLoading(false));
       setTodoBien(false);
-      ToastError('ERROR!: ', error);
       setConfirmandoInventario(false);
       setShowUbicacionInput(false);
     }
   };
 
+  const [ShowAlertNoDataToPublish, setShowAlertNoDataToPublish] =
+    useState(false);
   const AbreSegundoModal = () => {
-    if (scannedCodes.length === 0) {
+    if (ListadoActual.length === 0) {
       setSinRegistros(true);
+
+      setShowAlertNoDataToPublish(true);
+
       return;
     }
 
     setAbrirSegundoModal(true);
   };
 
-  const LimpiaData = () => {
-    setScannedCodes([]);
-    setScanCounts([]);
-    setCodigosNombres([]);
-    setLastCodeReadComplente({ codigo: '', cantidad: '' });
-  };
-
-  useEffect(() => {}, [CodigosNombres]);
-
-  const [ShowDialogGuardaUbicacion, setShowDialogGuardaUbicacion] =
-    useState(false);
+  useEffect(() => {
+    if (ShowAlertNoDataToPublish) {
+      setTimeout(() => {
+        setShowAlertNoDataToPublish(false);
+      }, 5000);
+    }
+  }, [ShowAlertNoDataToPublish]);
 
   const [ShowUbicacionInput, setShowUbicacionInput] = useState(false);
+
+  const [TypedCode, setTypedCode] = useState('');
+
+  const handleAddCode = (code: string) => {
+    if (code === '') {
+      return;
+    }
+
+    //actualiza todos a ultimo = 0
+    const registrosList = ListadoActual.map((x) => ({
+      ...x
+    }));
+
+    const existingCode = registrosList?.find((x) => x.codigo === code);
+
+    debugger;
+
+    const maxUltimo = registrosList?.reduce(
+      (max, x) => Math.max(max, x.ultimo),
+      0
+    );
+    if (existingCode) {
+      existingCode.ultimo = maxUltimo + 1;
+      existingCode.cantidad = Number(existingCode.cantidad) + 1;
+
+      //actualiza registro modificado
+      dispatch(
+        createSlot({
+          ['ListadoActual']: [
+            ...registrosList.filter((x) => x.codigo !== code),
+            existingCode
+          ]
+        })
+      );
+    } else {
+      const registro = {
+        codigo: code,
+        cantidad: 1,
+        ultimo: maxUltimo + 1
+      };
+
+      dispatch(
+        createSlot({
+          ['ListadoActual']: [...registrosList, registro]
+        })
+      );
+      getCode(code);
+    }
+
+    setTypedCode('');
+    setShowUltimoLeidoEnHeader(true);
+  };
+
+  const handleChangeCantidad = (row: any, value: string) => {
+    const registrosList = [...ListadoActual];
+
+    const existingCode = registrosList?.find((x) => x.codigo === row.codigo);
+
+    const maxUltimo = registrosList?.reduce(
+      (max, x) => Math.max(max, x.ultimo),
+      0
+    );
+
+    if (existingCode) {
+      const updatedCode = {
+        ...existingCode,
+        cantidad: value === '' ? '' : Number(value)
+      };
+
+      dispatch(
+        createSlot({
+          ListadoActual: [
+            ...registrosList.filter((x) => x.codigo !== row.codigo),
+            updatedCode
+          ]
+        })
+      );
+    }
+  };
+
+  const ActualizaPosicion = (row: any) => {
+    const registrosList = [...ListadoActual];
+
+    const existingCode = registrosList?.find((x) => x.codigo === row.codigo);
+
+    const maxUltimo = registrosList?.reduce(
+      (max, x) => Math.max(max, x.ultimo),
+      0
+    );
+
+    if (existingCode) {
+      const updatedCode = {
+        ...existingCode,
+        ultimo: maxUltimo + 1
+      };
+
+      dispatch(
+        createSlot({
+          ListadoActual: [
+            ...registrosList.filter((x) => x.codigo !== row.codigo),
+            updatedCode
+          ]
+        })
+      );
+    }
+  };
+
+  const handleDeleteAll = () => {
+    setCodigosNombres([]);
+    setTodoBien(true);
+    dispatch(createSlot({ ['ListadoActual']: [] }));
+  };
 
   return (
     <>
@@ -651,6 +481,26 @@ function Scandit() {
           <Card
             sx={{ overflow: 'hidden', marginTop: '2vh', marginBottom: '1vh' }}
           >
+            {ShowAlertNoDataToPublish && (
+              <Alert
+                severity="warning"
+                action={
+                  <IconButton
+                    aria-label="close"
+                    color="error"
+                    size="small"
+                    onClick={() => {
+                      setShowAlertNoDataToPublish(false);
+                    }}
+                  >
+                    <CloseIcon fontSize="inherit" />
+                  </IconButton>
+                }
+                sx={{ mb: 2 }}
+              >
+                No hay datos para publicar
+              </Alert>
+            )}
             <CardContent sx={{ overflow: 'hidden' }}>
               <Grid
                 sx={{ overflow: 'hidden' }}
@@ -678,8 +528,9 @@ function Scandit() {
                         justifyContent: 'center', // Centra horizontalmente
                         alignItems: 'center' // Centra verticalmente
                       }}
-                      aria-disabled={scannedCodes.length === 0 || !show}
-                      onClick={LimpiaData}
+                      aria-disabled={
+                        ListadoActual?.length === 0 || !showUltimoLeidoEnHeader
+                      }
                       onTouchStart={function () {
                         document.getElementById('cleanButton').style.color =
                           'red';
@@ -689,12 +540,13 @@ function Scandit() {
                           'gray';
                       }}
                     >
-                      <DeleteIcon
-                        id={'cleanButton'}
+                      <IconButton
                         color="secondary"
-                        sx={{ marginRight: '5vw' }}
-                        //style={{ fontSize: '70px' }}
-                      />
+                        sx={{ marginRight: '5vw', cursor: 'pointer' }}
+                        onClick={() => handleDeleteAll()}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
                     </Box>
 
                     <Box
@@ -706,7 +558,9 @@ function Scandit() {
                         justifyContent: 'center', // Centra horizontalmente
                         alignItems: 'center' // Centra verticalmente
                       }}
-                      aria-disabled={scannedCodes.length === 0 || show}
+                      aria-disabled={
+                        ListadoActual?.length === 0 || showUltimoLeidoEnHeader
+                      }
                       onClick={modificarCodigos}
                     >
                       <ScannerIcon
@@ -722,7 +576,7 @@ function Scandit() {
                       />
                     </Box>
 
-                    <Box
+                    {/* <Box
                       sx={{
                         width: '10vw',
                         height: 'auto',
@@ -731,8 +585,10 @@ function Scandit() {
                         justifyContent: 'center', // Centra horizontalmente
                         alignItems: 'center' // Centra verticalmente
                       }}
-                      aria-disabled={scannedCodes.length === 0 || show}
-                      onClick={showScanner}
+                      aria-disabled={
+                        scannedCodes.length === 0 || showUltimoLeidoEnHeader
+                      }
+                      onClick={modificarCodigos}
                     >
                       <Camera
                         color={
@@ -743,28 +599,15 @@ function Scandit() {
                           marginRight: '5vw'
                         }}
                       />
-                    </Box>
+                    </Box> */}
 
-                    <Box
-                      sx={{
-                        width: '10vw',
-                        height: 'auto',
-                        paddingLeft: 1,
-                        display: 'flex',
-                        justifyContent: 'center', // Centra horizontalmente
-                        alignItems: 'center' // Centra verticalmente
-                      }}
-                      aria-disabled={scannedCodes.length === 0 || show}
+                    <IconButton
+                      color="primary"
+                      sx={{ marginLeft: '5vw', cursor: 'pointer' }}
                       onClick={AbreSegundoModal}
                     >
-                      <PublishIcon
-                        color={'primary'}
-                        style={{
-                          //fontSize: '1rem',
-                          marginLeft: '5vw'
-                        }}
-                      />
-                    </Box>
+                      <PublishIcon />
+                    </IconButton>
                   </Box>
                   <Grid />
                 </Grid>
@@ -777,7 +620,9 @@ function Scandit() {
                       justifyContent: 'center', // Centra horizontalmente
                       alignItems: 'center' // Centra verticalmente
                     }}
-                    aria-disabled={scannedCodes.length === 0 || show}
+                    aria-disabled={
+                      ListadoActual?.length === 0 || showUltimoLeidoEnHeader
+                    }
                     onClick={() => {
                       setOpenConfirmDialog(true);
                     }}
@@ -799,26 +644,38 @@ function Scandit() {
                 />
               )}
 
-              {show && scanCounts ? (
-                scanCounts.map((code, index) => (
-                  <Box key={index} sx={{ mt: 2 }}>
-                    <Grid container spacing={1}>
-                      <Grid item xs={3}>
-                        <Typography variant="body2">Código:</Typography>
-                        <Typography variant="body1">Cantidad:</Typography>
-                        <Typography variant="body1">Descripción:</Typography>
+              {showUltimoLeidoEnHeader && ListadoActual ? (
+                [...ListadoActual]
+                  .filter(
+                    (x) =>
+                      x.ultimo ===
+                      [...ListadoActual].reduce(
+                        (max, x) => Math.max(max, x.ultimo),
+                        0
+                      )
+                  )
+                  .map((code, index) => (
+                    <Box key={index} sx={{ mt: 2 }}>
+                      <Grid container spacing={1}>
+                        <Grid item xs={3}>
+                          <Typography variant="body2">Código:</Typography>
+                          <Typography variant="body1">Cantidad:</Typography>
+                          <Typography variant="body1">Descripción:</Typography>
+                        </Grid>
+                        <Grid item xs={9}>
+                          <Typography variant="body1">{code.codigo}</Typography>
+                          <Typography variant="body1">
+                            {code.cantidad}
+                          </Typography>
+                          <Typography variant="body1">
+                            {CodigosNombres?.find(
+                              (x) => x.codigo === code.codigo
+                            )?.desc_art || 'No se encontró el artículo'}
+                          </Typography>
+                        </Grid>
                       </Grid>
-                      <Grid item xs={9}>
-                        <Typography variant="body1">{code.codigo}</Typography>
-                        <Typography variant="body1">{code.cantidad}</Typography>
-                        <Typography variant="body1">
-                          {CodigosNombres?.find((x) => x.codigo === code.codigo)
-                            ?.desc_art || 'No se encontró el artículo'}
-                        </Typography>
-                      </Grid>
-                    </Grid>
-                  </Box>
-                ))
+                    </Box>
+                  ))
               ) : (
                 <Box></Box>
               )}
@@ -861,7 +718,7 @@ function Scandit() {
                         display={'flex'}
                         justifyContent={'flex-end'}
                       >
-                        <h4>Total registros: {scannedCodes.length}</h4>
+                        <h4>Total registros: {ListadoActual?.length}</h4>
                       </Box>
                       <FormControl fullWidth variant="outlined">
                         <InputLabel htmlFor="outlined-adornment-password">
@@ -873,94 +730,29 @@ function Scandit() {
                           id="outlined-adornment-password"
                           endAdornment={
                             <IconButton
-                              onClick={() => {
-                                if (TypedCode === '') {
+                              onClick={(e: any) => {
+                                if (e.target.value === '') {
                                   return;
                                 }
 
-                                const registros = [...scannedCodes];
-                                const existe = registros.find(
-                                  (x) => x.codigo.trim() == TypedCode.trim()
-                                );
-
-                                if (existe) {
-                                  registros.map((x) => {
-                                    if (x.codigo.trim() === TypedCode.trim()) {
-                                      x.cantidad = Number(x.cantidad) + 1;
-                                    } else {
-                                      x.cantidad = '';
-                                    }
-                                  });
-                                  setScannedCodes([...registros]);
-                                } else {
-                                  setScannedCodes((prevCodes) => [
-                                    ...prevCodes,
-                                    { codigo: TypedCode.trim(), cantidad: 1 }
-                                  ]);
-                                }
-
-                                setTypedCode('');
-
-                                //poner el foco de nuevo en el input
-                                document
-                                  .getElementById('outlined-adornment-password')
-                                  .focus();
+                                handleAddCode(TypedCode);
                               }}
                             >
                               <ArrowForwardIcon />
                             </IconButton>
                           }
-                          error={CantidadEditando < 0}
+                          error={false}
                           fullWidth
-                          // helperText={
-                          //   CantidadEditando < 0
-                          //     ? 'La cantidad debe ser mayor a 0'
-                          //     : ''
-                          // }
                           label={'Codigo'}
                           name="codigo"
                           //evento enter
-                          onKeyPress={(e) => {
+                          onKeyPress={(e: any) => {
                             if (e.key === 'Enter') {
-                              if (TypedCode === '') {
+                              if (e.target.value === '') {
                                 return;
                               }
 
-                              setActualCode(TypedCode.trim());
-
-                              const registros = [...scannedCodes];
-                              const existe = registros.find(
-                                (x) => x.codigo.trim() == TypedCode.trim()
-                              );
-
-                              if (existe) {
-                                registros.map((x) => {
-                                  if (x.codigo.trim() === TypedCode.trim()) {
-                                    x.cantidad = Number(x.cantidad || 0) + 1;
-                                  }
-                                });
-                                setScannedCodes([...registros]);
-                                setLastCodeReadComplente(
-                                  registros.find(
-                                    (x) => x.codigo.trim() == TypedCode.trim()
-                                  )
-                                );
-                              } else {
-                                setScannedCodes((prevCodes) => [
-                                  ...prevCodes,
-                                  { codigo: TypedCode.trim(), cantidad: 1 }
-                                ]);
-                                setLastCodeReadComplente({
-                                  codigo: TypedCode.trim(),
-                                  cantidad: 1
-                                });
-                              }
-                              setTypedCode('');
-
-                              //poner el foco de nuevo en el input
-                              document
-                                .getElementById('outlined-adornment-password')
-                                .focus();
+                              handleAddCode(TypedCode);
                             }
                           }}
                           onChange={(e) => setTypedCode(e.target.value)}
@@ -1047,151 +839,180 @@ function Scandit() {
                           </TableRow>
                         </TableHead>
                         <TableBody>
-                          {[
-                            LastCodeReadComplente?.codigo
-                              ? LastCodeReadComplente
-                              : null,
-                            ...accumulatedData.filter(
-                              (row) => row.codigo !== ActualCode
-                            )
-                          ]
-                            .filter(Boolean) // <-- Esto elimina los nulls del array
-                            .map((row: any, index) => (
-                              <>
-                                <TableRow
-                                  key={row.codigo}
-                                  sx={{
-                                    fontSize: '0.2rem',
-                                    '&:last-child td, &:last-child th': {
-                                      border: 0
-                                    },
-                                    backgroundColor:
-                                      LastCodeReadComplente.codigo ===
-                                      row.codigo
-                                        ? '#b9b9b9'
-                                        : 'white'
-                                  }}
-                                  onClick={() => handleRowClick(index)}
-                                >
-                                  <TableCell
-                                    component="th"
-                                    scope="row"
-                                    sx={{ fontSize: '0.6rem' }}
+                          {ListadoActual &&
+                            [...ListadoActual]
+                              .sort((a, b) => b.ultimo - a.ultimo) // copia segura + orden descendente
+                              .map((row: any, index: number) => (
+                                <>
+                                  <TableRow
+                                    key={row.codigo}
+                                    sx={{
+                                      fontSize: '0.2rem',
+                                      '&:last-child td, &:last-child th': {
+                                        border: 0
+                                      },
+                                      backgroundColor:
+                                        row.ultimo ===
+                                        [...ListadoActual].reduce(
+                                          (max, x) => Math.max(max, x.ultimo),
+                                          0
+                                        )
+                                          ? '#b9b9b9'
+                                          : 'white'
+                                    }}
+                                    onClick={() => handleRowClick(index)}
                                   >
-                                    {row.codigo}
-                                  </TableCell>
-                                  <TableCell
-                                    align="left"
-                                    sx={{ fontSize: '0.6rem' }}
-                                  >
-                                    {CodigosNombres.find(
-                                      (x) => x.codigo === row.codigo
-                                    )?.desc_art || 'No se encontró el artículo'}
-                                  </TableCell>
-                                  <TableCell
-                                    align="left"
-                                    sx={{ fontSize: '0.6rem' }}
-                                  >
-                                    <TextField
-                                      error={CantidadEditando < 0}
-                                      fullWidth
-                                      helperText={
-                                        CantidadEditando < 0
-                                          ? 'La cantidad debe ser mayor a 0'
-                                          : ''
-                                      }
-                                      label={''}
-                                      name="cantidad"
-                                      onChange={(e) =>
-                                        handleChangeCantidad(e, row)
-                                      }
-                                      type="number"
-                                      value={row.cantidad}
-                                      size="small"
-                                      margin="none"
-                                      inputProps={{
-                                        style: {
-                                          textAlign: 'right',
-                                          fontSize: '0.6rem',
-                                          border: 'none'
-                                        }
+                                    <TableCell
+                                      component="th"
+                                      scope="row"
+                                      sx={{ fontSize: '0.6rem' }}
+                                      onClick={() => {
+                                        setExpandeInfoRenlgon((prev) => ({
+                                          ...prev,
+                                          [index]: !prev[index]
+                                        }));
                                       }}
-                                      sx={{ height: '100%' }}
-                                    />
-                                  </TableCell>
-                                  <IconButton>
-                                    {openRows[index] ? (
-                                      <ExpandLess />
-                                    ) : (
-                                      <ExpandMoreIcon />
-                                    )}
-                                  </IconButton>
-                                  <TableCell
-                                    align="left"
-                                    sx={{ fontSize: '0.6rem' }}
-                                  >
-                                    <DeleteIcon
-                                      color="error"
-                                      onClick={() => handleDelete(row.codigo)}
-                                    />
-                                  </TableCell>
-                                </TableRow>
-
-                                <TableRow>
-                                  <TableCell
-                                    style={{ paddingBottom: 0, paddingTop: 0 }}
-                                    colSpan={4}
-                                  >
-                                    <Collapse
-                                      in={openRows[index]}
-                                      timeout="auto"
-                                      unmountOnExit
                                     >
-                                      <Table>
-                                        <TableBody>
-                                          <TableRow>
-                                            <TableCell
-                                              align="left"
-                                              sx={{ fontSize: '0.6rem' }}
-                                            >
-                                              EXISTENCIA
-                                            </TableCell>
-                                            <TableCell
-                                              align="left"
-                                              sx={{ fontSize: '0.6rem' }}
-                                            >
-                                              {
-                                                CodigosNombres.find(
-                                                  (x) => x.codigo === row.codigo
-                                                )?.existencia
-                                              }
-                                            </TableCell>
-                                          </TableRow>
-                                          <TableRow>
-                                            <TableCell
-                                              align="left"
-                                              sx={{ fontSize: '0.6rem' }}
-                                            >
-                                              ULTIMO INVENTARIO
-                                            </TableCell>
-                                            <TableCell
-                                              align="left"
-                                              sx={{ fontSize: '0.6rem' }}
-                                            >
-                                              {
-                                                CodigosNombres.find(
-                                                  (x) => x.codigo === row.codigo
-                                                )?.fecha_ultimo_inventario
-                                              }
-                                            </TableCell>
-                                          </TableRow>
-                                        </TableBody>
-                                      </Table>
-                                    </Collapse>
-                                  </TableCell>
-                                </TableRow>
-                              </>
-                            ))}
+                                      {row.codigo}
+                                    </TableCell>
+                                    <TableCell
+                                      align="left"
+                                      sx={{ fontSize: '0.6rem' }}
+                                      onClick={() => {
+                                        setExpandeInfoRenlgon((prev) => ({
+                                          ...prev,
+                                          [index]: !prev[index]
+                                        }));
+                                      }}
+                                    >
+                                      {CodigosNombres.find(
+                                        (x) => x.codigo === row.codigo
+                                      )?.desc_art ||
+                                        'No se encontró el artículo'}
+                                    </TableCell>
+                                    <TableCell
+                                      align="left"
+                                      sx={{ fontSize: '0.6rem' }}
+                                    >
+                                      <TextField
+                                        error={false}
+                                        fullWidth
+                                        helperText={''}
+                                        label={''}
+                                        name="cantidad"
+                                        onChange={(e) => {
+                                          handleChangeCantidad(
+                                            row,
+                                            e.target.value
+                                          );
+                                        }}
+                                        onBlur={(e) => {
+                                          ActualizaPosicion(row);
+                                        }}
+                                        onKeyPress={(e) => {
+                                          if (e.key === 'Enter') {
+                                            ActualizaPosicion(row);
+                                          }
+                                        }}
+                                        type="number"
+                                        value={row.cantidad}
+                                        size="small"
+                                        margin="none"
+                                        inputProps={{
+                                          style: {
+                                            textAlign: 'right',
+                                            fontSize: '0.6rem',
+                                            border: 'none'
+                                          }
+                                        }}
+                                        sx={{ height: '100%' }}
+                                      />
+                                    </TableCell>
+                                    <IconButton
+                                      onClick={() => {
+                                        setExpandeInfoRenlgon((prev) => ({
+                                          ...prev,
+                                          [index]: !prev[index]
+                                        }));
+                                      }}
+                                    >
+                                      {ExpandeInfoRenglon[index] ? (
+                                        <ExpandLess />
+                                      ) : (
+                                        <ExpandMoreIcon />
+                                      )}
+                                    </IconButton>
+                                    <TableCell
+                                      align="left"
+                                      sx={{ fontSize: '0.6rem' }}
+                                    >
+                                      <DeleteIcon
+                                        color="error"
+                                        onClick={() => handleDelete(row.codigo)}
+                                      />
+                                    </TableCell>
+                                  </TableRow>
+
+                                  <TableRow>
+                                    <TableCell
+                                      style={{
+                                        paddingBottom: 0,
+                                        paddingTop: 0
+                                      }}
+                                      colSpan={4}
+                                    >
+                                      <Collapse
+                                        in={ExpandeInfoRenglon[index]}
+                                        timeout="auto"
+                                        unmountOnExit
+                                      >
+                                        <Table>
+                                          <TableBody>
+                                            <TableRow>
+                                              <TableCell
+                                                align="left"
+                                                sx={{ fontSize: '0.6rem' }}
+                                              >
+                                                EXISTENCIA
+                                              </TableCell>
+                                              <TableCell
+                                                align="left"
+                                                sx={{ fontSize: '0.6rem' }}
+                                              >
+                                                {
+                                                  CodigosNombres.find(
+                                                    (x) =>
+                                                      x.codigo === row.codigo
+                                                  )?.existencia
+                                                }
+                                              </TableCell>
+                                            </TableRow>
+                                            <TableRow>
+                                              <TableCell
+                                                align="left"
+                                                sx={{ fontSize: '0.6rem' }}
+                                              >
+                                                ULTIMO INVENTARIO
+                                              </TableCell>
+                                              <TableCell
+                                                align="left"
+                                                sx={{ fontSize: '0.6rem' }}
+                                              >
+                                                {
+                                                  CodigosNombres.find(
+                                                    (x) =>
+                                                      x.codigo === row.codigo
+                                                  )?.fecha_ultimo_inventario
+                                                }
+                                              </TableCell>
+                                            </TableRow>
+                                          </TableBody>
+                                        </Table>
+                                      </Collapse>
+                                    </TableCell>
+                                  </TableRow>
+                                </>
+                              ))}
                         </TableBody>
                       </Table>
                     </Box>
@@ -1239,7 +1060,9 @@ function Scandit() {
                       alignItems: 'center', // Centra verticalmente
                       userSelect: 'none'
                     }}
-                    aria-disabled={scannedCodes.length === 0 || show}
+                    aria-disabled={
+                      ListadoActual?.length === 0 || showUltimoLeidoEnHeader
+                    }
                     onClick={() => setAbrirSegundoModal(false)}
                   >
                     <ArrowBackIcon />
@@ -1258,7 +1081,9 @@ function Scandit() {
                       userSelect: 'none',
                       textAlign: 'center'
                     }}
-                    aria-disabled={scannedCodes.length === 0 || show}
+                    aria-disabled={
+                      ListadoActual?.length === 0 || showUltimoLeidoEnHeader
+                    }
                     onClick={() => setAbrirSegundoModal(false)}
                   >
                     Preview Inventario Final
@@ -1276,7 +1101,9 @@ function Scandit() {
                       color: ConfirmandoInventario ? 'gray' : 'green',
                       userSelect: 'none'
                     }}
-                    aria-disabled={scannedCodes.length === 0 || show}
+                    aria-disabled={
+                      ListadoActual?.length === 0 || showUltimoLeidoEnHeader
+                    }
                     onClick={() => {
                       if (ConfirmandoInventario) {
                         return;
@@ -1353,7 +1180,7 @@ function Scandit() {
             display={'flex'}
             justifyContent={'flex-end'}
           >
-            <h4>Total registros: {scannedCodes.length}</h4>
+            <h4>Total registros: {ListadoActual?.length}</h4>
           </Box>
           {isLoading && (
             <>
@@ -1563,7 +1390,7 @@ function Scandit() {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {accumulatedData.map((row) => (
+                        {ListadoActual?.map((row) => (
                           <TableRow
                             key={row.codigo}
                             sx={{
@@ -1679,4 +1506,4 @@ function Scandit() {
   );
 }
 
-export default Scandit;
+export default PantallaPrincipal;

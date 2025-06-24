@@ -11,24 +11,15 @@ import PageHeader from './PageHeader';
 import PageTitleWrapper from 'src/components/PageTitleWrapper';
 import { BarcodeScanner } from 'src/components/Scanner/zxing';
 import { ScannerHTML } from 'src/components/Scanner/html5QRScanner';
+import PantallaPrincipal from 'src/components/Scanner/indexNew';
+import { createSlot } from 'src/store/slices/page';
 
 const ManagementConceptosGastos = () => {
-  const isMountedRef = useRefMounted();
-  const { authLocalState } = useAuth();
-  const { init, dispatch } = usePage("INVENTARIO");
-
-  const getData = useCallback(async () => {
-    try {
-
-    } catch (err) {
-      console.error(err);
-    }
-  }, [isMountedRef]);
+  const { dispatch } = usePage("INVENTARIO");
 
   useEffect(() => {
-    init();
-    getData();
-  }, [getData]);
+    dispatch(createSlot({ ['ListadoActual']: [] }));
+  }, []);
 
 
 
@@ -44,7 +35,7 @@ const ManagementConceptosGastos = () => {
       </PageTitleWrapper>
 
 
-      <Scandit />
+      <PantallaPrincipal />
       <Footer />
     </>
   );

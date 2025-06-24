@@ -7,23 +7,15 @@ import useAuth from 'src/hooks/useAuth';
 import SelectInput from 'src/components/SelectInput/Index';
 import { SelectChangeEvent } from '@mui/material';
 import { Button, Divider } from '@mui/material';
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  IconButton,
-  Tooltip
-} from '@mui/material';
+import { Dialog, DialogContent, DialogTitle } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { usePage } from 'src/hooks/usePage';
 import Cargando from 'src/components/Cargando';
 import { sucursalInterface } from 'src/interfaces/sucursalInterface';
 import { setInfoSucursal } from 'src/store/slices/Empresa';
 import { authReducer } from 'src/contexts/Auth/AuthReducer';
-import { APP } from 'src/config';
 
 const Login = () => {
-  const [LoginError, setLoginError] = useState(null);
   const { dispatch: dispatchSucursal } = usePage();
   const [dispatch] = useReducer(authReducer, null);
   const navigate = useNavigate();
@@ -71,10 +63,10 @@ const Login = () => {
           response.data.result as ProductosEmpresa[]
         );
 
-        setCredencialesUusario(credenciales)
+        setCredencialesUusario(credenciales);
         const cred = credenciales;
 
-        cred.id_empresa = response.data.result[0].id_empresa
+        cred.id_empresa = response.data.result[0].id_empresa;
 
         if (productos.length > 1) {
           setProductoSeleccionado(productos[0]);
@@ -83,7 +75,7 @@ const Login = () => {
         } else {
           if (productos.length == 1) {
             setEsValido(true);
-            cred.id_sucursal = 1
+            cred.id_sucursal = 1;
             setProductoSeleccionado(productos[0]);
             cambiarCadenaConexion(productos[0].id_producto, cred);
           } else {
@@ -94,7 +86,7 @@ const Login = () => {
     } catch (error: any) {}
   }
 
-  async function getSucursales() {
+  async function getSucursales(cred: any = null) {
     const response = await sucursales();
 
     if (response.data.isSuccess == true) {
@@ -125,10 +117,11 @@ const Login = () => {
             nombre_corto: sucursales[0].nombre_corto.trim()
           });
 
-          construirToken(
+          await construirToken(
             sucursales[0].clave_sucursal,
             productoSeleccionado.id_producto,
-            sucursales[0]
+            sucursales[0],
+            cred
           );
         } else {
           alert('No se encontraron sucursales');
@@ -150,17 +143,18 @@ const Login = () => {
   async function construirToken(
     id_sucursal: number,
     id_rol: number,
-    sucursal: sucursalInterface
+    sucursal: sucursalInterface,
+    credencial: any = null
   ) {
-    const credencial = {
+
+    debugger
+    credencial = credencial ?? {
       email: credencialesUsuario.email,
       password: credencialesUsuario.password,
       id_empresa: credencialesUsuario.id_empresa,
       id_sucursal: id_sucursal,
       id_rol: id_rol
     };
-
-    debugger
 
     var response = await token(credencial);
 
@@ -238,19 +232,21 @@ const Login = () => {
 
   async function cambiarCadenaConexion(id_rol: number, cred: any = null) {
     setCargando(true);
-    
+
     const credencial = {
       email: cred != null ? cred.email : credencialesUsuario.email,
       password: cred != null ? cred.password : credencialesUsuario.password,
-      id_empresa: cred != null ? cred.id_empresa : credencialesUsuario.id_empresa,
-      id_sucursal: cred != null ? cred.id_sucursal : credencialesUsuario.id_sucursal,
+      id_empresa:
+        cred != null ? cred.id_empresa : credencialesUsuario.id_empresa,
+      id_sucursal:
+        cred != null ? cred.id_sucursal : credencialesUsuario.id_sucursal,
       id_rol: cred != null ? cred.id_rol : id_rol
     };
 
     var response = await cambiarCadena(credencial);
 
     if (response.data.isSuccess) {
-      getSucursales();
+      await getSucursales(credencial);
     } else {
       alert('No fue posible cambiar la cadena de conexión');
     }
