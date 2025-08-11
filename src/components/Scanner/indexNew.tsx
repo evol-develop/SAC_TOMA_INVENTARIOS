@@ -143,9 +143,17 @@ function PantallaPrincipal() {
     let art = codigosNombres.find((x) => x.codigo === code);
 
     if (!art) {
+      console.log('codigo', code);
       try {
+        const data = {
+          codigo: code
+        }
         const response = await axios.post<ResponseInterface>(
-          `/api/colores/leerCodigo/${code}`
+          `/api/colores/leerCodigo`, 
+          data,
+          {
+            headers: { 'Content-Type': 'application/json' }
+          }
         );
 
         let registro = {
@@ -295,8 +303,7 @@ function PantallaPrincipal() {
               message = error.message;
             }
           } else {
-            message =
-              (error as Error)?.message ?? 'Error en la conexión.';
+            message = (error as Error)?.message ?? 'Error en la conexión.';
           }
 
           enqueueSnackbar(`ERROR: ${message}`, {
